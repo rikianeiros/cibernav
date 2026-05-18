@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Lanzar Nuevo Análisis</h2>
+<p>Introduce los datos para ejecutar un escaneo activo de red usando Nmap.</p>
+
+{% if error %}
+<div style="background:#fff5f5; border-left: 4px solid #e53e3e; padding: 1rem; margin-bottom: 1.5rem; color: #c53030;">
+    ⚠️ {{ error }}
+</div>
+{% endif %}
+
+<div class="card">
+    <form method="POST" action="{{ url_for('nuevo_analisis') }}">
+        <label for="buque">Nombre del Buque:</label>
+        <input type="text" id="buque" name="buque" placeholder="Ej: F-101 Alvaro de Bazan" required>
+
+        <label for="objetivo">Red Objetivo (IP o Rango CIDR):</label>
+        <input type="text" id="objetivo" name="objetivo"
+               placeholder="Ej: 192.168.1.0/24 ó 10.0.0.1"
+               pattern="(\d{1,3}\.){3}\d{1,3}(/\d{1,2})?"
+               title="Introduce una IP o rango CIDR válido. Ej: 192.168.1.0/24"
+               required>
+
+        <br><br>
+        <button type="submit" class="btn">Iniciar Escaneo</button>
+    </form>
+</div>
+<p><small>El análisis se ejecuta en segundo plano. Serás redirigido automáticamente a la página de espera.</small></p>
+{% endblock %}

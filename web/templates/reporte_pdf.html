@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Informe Ejecutivo de Seguridad Naval</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.5; font-size: 11pt; }
+        h1, h2, h3 { color: #1a365d; }
+        .header { text-align: center; border-bottom: 2px solid #1a365d; margin-bottom: 30px; padding-bottom: 10px; }
+        .executive-summary { background-color: #f8fafc; padding: 15px; border-left: 4px solid #2b6cb0; margin-bottom: 30px; }
+        .device-card { border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
+        .risk-alta { color: #e53e3e; font-weight: bold; }
+        .risk-media { color: #d69e2e; font-weight: bold; }
+        .risk-baja { color: #38a169; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt; }
+        th, td { border: 1px solid #cbd5e0; padding: 8px; text-align: left; }
+        th { background-color: #edf2f7; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>INFORME DE AUDITORÍA DE SEGURIDAD NAVAL</h1>
+        <p><strong>Buque:</strong> {{ escaneo.buque_nombre }} | <strong>Fecha:</strong> {{ escaneo.fecha }}</p>
+        <p><em>Clasificación: NO CLASIFICADO</em></p>
+    </div>
+
+    <div class="executive-summary">
+        <h2>Resumen Ejecutivo</h2>
+        <p>El presente informe detalla el análisis de red activo realizado en las instalaciones del buque <strong>{{ escaneo.buque_nombre }}</strong>. Se han detectado <strong>{{ resultados|length }}</strong> dispositivos conectados en la red durante la ventana de auditoría.</p>
+        <p>El propósito de este documento es traducir los hallazgos técnicos a un lenguaje claro para la toma de decisiones por parte de la Jefatura, destacando configuraciones potencialmente peligrosas que podrían comprometer la integridad de la navegación o la confidencialidad de la dotación.</p>
+    </div>
+
+    <h2>Inventario de Red y Vulnerabilidades Detectadas</h2>
+    {% for res in resultados %}
+    <div class="device-card">
+        <h3>Dispositivo IP: {{ res.info.ip }}</h3>
+        <p><strong>Identidad Física (MAC):</strong> {{ res.info.mac }} (Fabricante: {{ res.info.fabricante }})<br>
+        <strong>Sistema Operativo Detectado:</strong> {{ res.info.os_detectado }}<br>
+        <strong>Nombre de Host en Red:</strong> {{ res.info.hostname or "No publicita nombre" }}</p>
+
+        {% if res.servicios %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Servicio Expuesto</th>
+                    <th>Riesgo</th>
+                    <th>Implicación de Seguridad</th>
+                    <th>Acción Recomendada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for serv in res.servicios %}
+                <tr>
+                    <td><strong>{{ serv.traduccion.nombre }}</strong> (Puerto {{ serv.puerto }})</td>
+                    <td class="risk-{{ serv.traduccion.severidad|lower }}">{{ serv.traduccion.severidad }}</td>
+                    <td>{{ serv.traduccion.explicacion }}</td>
+                    <td>{{ serv.traduccion.recomendacion }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="risk-baja">No se detectaron puertos abiertos ni servicios peligrosos expuestos.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+    
+    <div style="margin-top: 50px; text-align: center; color: #718096; font-size: 9pt;">
+        <p>Generado automáticamente por CIBERNAV | Inteligencia de Auditoría Naval</p>
+    </div>
+</body>
+</html>

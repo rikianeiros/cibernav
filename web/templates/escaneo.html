@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Informe de Escaneo: {{ escaneo.buque_nombre }}</h2>
+<p>Fecha de auditoría: {{ escaneo.fecha }} | Tipo: {{ escaneo.tipo_escaneo }}</p>
+
+<a href="{{ url_for('descargar_pdf', escaneo_id=escaneo.id) }}" class="btn" style="margin-bottom: 20px;">Descargar Informe PDF</a>
+<a href="{{ url_for('ver_buque', buque_id=escaneo.buque_id) }}" style="margin-left: 1rem;">← Volver al buque</a>
+
+{% for res in resultados %}
+<div class="card">
+    <h3>Dispositivo: {{ res.info.ip }}</h3>
+    <p>
+        <strong>MAC:</strong> {{ res.info.mac }} <br>
+        <strong>Fabricante:</strong> {{ res.info.fabricante }} <br>
+        <strong>Hostname:</strong> {{ res.info.hostname or 'No publicita nombre' }} <br>
+        <strong>Sistema Operativo:</strong> {{ res.info.os_detectado }}
+    </p>
+
+    {% if res.servicios %}
+    <h4>Puertos y Servicios Abiertos</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Puerto</th>
+                <th>Servicio</th>
+                <th>Riesgo</th>
+                <th>Implicación</th>
+                <th>Recomendación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for serv in res.servicios %}
+            <tr>
+                <td>{{ serv.puerto }}/{{ serv.protocolo }}</td>
+                <td><strong>{{ serv.traduccion.nombre }}</strong></td>
+                <td><span class="badge badge-{{ serv.traduccion.severidad|lower }}">{{ serv.traduccion.severidad }}</span></td>
+                <td>{{ serv.traduccion.explicacion }}</td>
+                <td>{{ serv.traduccion.recomendacion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--green-safe);"><strong>No se detectaron puertos abiertos. Equipo aparentemente seguro.</strong></p>
+    {% endif %}
+</div>
+{% else %}
+<p>No se encontraron dispositivos activos en este escaneo.</p>
+{% endfor %}
+
+{% endblock %}

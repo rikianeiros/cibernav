@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Historial de Auditorías</h2>
+<p>Listado de buques analizados y registrados en la base de datos local.</p>
+
+<a href="{{ url_for('nuevo_analisis') }}" class="btn" style="margin-bottom: 1.5rem;">+ Nuevo Análisis</a>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre del Buque</th>
+                <th>Fecha de Registro</th>
+                <th>Nº de Escaneos</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for buque in buques %}
+            <tr>
+                <td><strong>{{ buque.nombre }}</strong></td>
+                <td>{{ buque.fecha_registro }}</td>
+                <td>{{ buque.num_escaneos }}</td>
+                <td><a href="{{ url_for('ver_buque', buque_id=buque.id) }}">Ver escaneos →</a></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="color: #718096;">No hay buques registrados. Realiza tu primer escaneo.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
