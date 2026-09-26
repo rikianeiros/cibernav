@@ -146,6 +146,33 @@ def _extraer_version(banner: str) -> str:
     return m.group(0) if m else ""
 
 
+_VULNERS_LINE = re.compile(r"(CVE-\d{4}-\d+|[A-Z0-9]+:[A-Z0-9-]+)\s+(\d+\.\d+)")
+
+
+def parse_vulners(texto: str) -> list[dict]:
+    """
+    Parsea la salida del script NSE `vulners` de nmap. Devuelve una lista de
+    {cve, cvss, severidad} ordenada por CVSS descendente, sin duplicados.
+    """
+    vistos = {}
+    for m in _VULNERS_LINE.finditer(texto or ""):
+        ident, score = m.group(1), float(m.group(2))
+        if ident not in vistos or score > vistos[ident]:
+            vistos[ident] = score
+    salida = []
+    for ident, score in sorted(vistos.items(), key=lambda x: -x[1]):
+        if score >= 9.0:
+            sev = "CRÍTICO"
+        elif score >= 7.0:
+            sev = "ALTO"
+        elif score >= 4.0:
+            sev = "MEDIO"
+        else:
+            sev = "BAJO"
+        salida.append({"cve": ident, "cvss": score, "severidad": sev})
+    return salida
+
+
 def match_cves(service: str, version_banner: str) -> list[dict]:
     """CVEs conocidos que casan con el servicio y su versión detectada."""
     texto = f"{service} {version_banner}".lower()

@@ -1,7 +1,7 @@
 import nmap
 import asyncio
 from modules.knowledge import PORT_KNOWLEDGE
-from modules.vulns import match_cves
+from modules.vulns import match_cves, parse_vulners
 
 class NmapScanner:
     def __init__(self):
@@ -20,13 +20,18 @@ class NmapScanner:
         # corrompería. Crear uno por llamada evita esa condición de carrera.
         return nmap.PortScanner()
 
-    async def scan(self, target_ip: str, profile: str = "rápido") -> list[dict]:
+    async def scan(self, target_ip: str, profile: str = "rápido", vulners: bool = False) -> list[dict]:
         nm = self._new()
         args = "-F -T4"
         if profile == "estándar":
             args = "-sV -T4"
         elif profile == "completo":
             args = "-sV -p- -T3"
+        # vulners necesita versiones (-sV) e Internet; añade el script NSE.
+        if vulners:
+            if "-sV" not in args:
+                args += " -sV"
+            args += " --script vulners"
 
         # Escaneo bloqueante, usar run_in_executor para no bloquear el loop asíncrono
         loop = asyncio.get_event_loop()
@@ -59,14 +64,18 @@ class NmapScanner:
                     "recomendacion": "Verificar si es necesario.",
                 })
 
-                results.append({
+                item = {
                     "port": port,
                     "state": state,
                     "service": service,
                     "version": banner,
                     "knowledge": knowledge,
                     "cves": match_cves(service, banner),
-                })
+                }
+                if vulners:
+                    script_out = pdata.get("script", {}).get("vulners", "")
+                    item["vulners"] = parse_vulners(script_out)
+                results.append(item)
 
         return results
 

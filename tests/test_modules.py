@@ -255,6 +255,34 @@ def test_vulns_update_from_file():
     assert "error" in vulns.update_from_url("file:///no/existe/x.json")
 
 
+def test_vulners_parser():
+    from modules import vulns
+    salida = """
+    cpe:/a:openbsd:openssh:7.2p2:
+        CVE-2016-6210    7.5     https://vulners.com/cve/CVE-2016-6210
+        CVE-2016-10009   9.8     https://vulners.com/cve/CVE-2016-10009
+        CVE-2016-6515    7.8     https://vulners.com/cve/CVE-2016-6515
+    """
+    r = vulns.parse_vulners(salida)
+    assert len(r) == 3
+    assert r[0]["cvss"] == 9.8 and r[0]["severidad"] == "CRÍTICO"  # ordenado por CVSS desc
+    assert vulns.parse_vulners("") == []
+
+
+def test_wifi_report():
+    from modules import report
+    networks = [
+        {"bssid": "AA:BB:CC:DD:EE:01", "ssid": "MiCasa", "channel": 6, "power": -40,
+         "privacy": "WPA2", "flags": [], "clients": ["11:22:33:44:55:66"], "wps": False},
+        {"bssid": "AA:BB:CC:DD:EE:02", "ssid": "Libre", "channel": 1, "power": -60,
+         "privacy": "OPN", "flags": ["OPEN_NETWORK"], "clients": [], "wps": False},
+    ]
+    html = report.render_html_wifi(networks, [{"mac": "11:22:33:44:55:66"}])
+    assert "INFORME DE AUDITORÍA WI-FI" in html
+    assert "MiCasa" in html and "Libre" in html
+    assert "Red abierta" in html  # nombre del cifrado OPN desde CIPHER_KNOWLEDGE
+
+
 def test_wash_parser():
     from modules import scanner
     salida = (

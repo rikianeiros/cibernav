@@ -269,14 +269,14 @@ async def stop_attack(attack_id: str, username: str = Depends(verify_credentials
 
 # --- nmap ---
 @app.post("/api/ports/scan")
-async def scan_ports(target_ip: str, profile: str = "rápido", username: str = Depends(verify_credentials)):
-    alert_engine.add_alert("INFO", f"Iniciando escaneo nmap a {target_ip} ({profile})", "nmap")
-    asyncio.create_task(run_nmap_and_notify(target_ip, profile))
+async def scan_ports(target_ip: str, profile: str = "rápido", vulners: bool = False, username: str = Depends(verify_credentials)):
+    alert_engine.add_alert("INFO", f"Iniciando escaneo nmap a {target_ip} ({profile}{', vulners' if vulners else ''})", "nmap")
+    asyncio.create_task(run_nmap_and_notify(target_ip, profile, vulners))
     return {"status": "started", "target": target_ip}
 
 
-async def run_nmap_and_notify(target_ip: str, profile: str):
-    results = await nmap_scanner.scan(target_ip, profile)
+async def run_nmap_and_notify(target_ip: str, profile: str, vulners: bool = False):
+    results = await nmap_scanner.scan(target_ip, profile, vulners)
     await manager.broadcast({"type": "nmap_finished", "target": target_ip, "results": results})
     alert_engine.add_alert("INFO", f"Escaneo nmap a {target_ip} finalizado", "nmap")
 
@@ -382,6 +382,16 @@ async def naval_nmea_auto(ip: str, username: str = Depends(verify_credentials)):
 
 
 # --- Informes ---
+@app.get("/api/report/wifi")
+async def report_wifi(username: str = Depends(verify_credentials)):
+    if not state.networks:
+        raise HTTPException(status_code=404, detail="No hay datos de un escaneo Wi-Fi. Lanza un escaneo primero.")
+    resultado = report.generar_informe_wifi(list(state.networks.values()), list(state.clients.values()))
+    if resultado["formato"] == "pdf":
+        return FileResponse(resultado["ruta"], media_type="application/pdf", filename=os.path.basename(resultado["ruta"]))
+    return HTMLResponse(content=resultado["contenido"])
+
+
 @app.get("/api/report/{escaneo_id}")
 async def get_report(escaneo_id: int, username: str = Depends(verify_credentials)):
     scan = db_manager.obtener_escaneo(escaneo_id)

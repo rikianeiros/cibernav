@@ -52,6 +52,7 @@
             <button onclick="app.startScan()">▶ Escanear</button>
             <button class="ghost" onclick="app.stopScan()">■ Parar escaneo</button>
             <button class="ghost" onclick="app.wpsScan()">Detectar WPS (wash)</button>
+            <a class="mini" href="/api/report/wifi" target="_blank" style="padding:7px 12px">Informe Wi-Fi</a>
         </div>
         <table class="data"><thead><tr>
             <th>BSSID</th><th>ESSID</th><th>Canal</th><th>Cifrado</th><th>Señal</th><th>Acción</th>
@@ -69,6 +70,7 @@
                 <option value="estándar">Estándar</option>
                 <option value="completo">Completo</option>
             </select>
+            <label class="chk" title="Consulta las versiones contra Vulners.com (requiere Internet)"><input type="checkbox" id="nmap-vulners"> vulners</label>
             <button onclick="app.scanPorts()">Escanear puertos</button>
         </div>
         <div class="row cvebar">

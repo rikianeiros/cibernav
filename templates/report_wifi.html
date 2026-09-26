@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Informe de Auditoría Wi-Fi — CIBERNAV</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.5; font-size: 11pt; }
+        h1, h2 { color: #1a365d; }
+        .header { text-align: center; border-bottom: 2px solid #1a365d; margin-bottom: 25px; padding-bottom: 10px; }
+        .summary { background: #f8fafc; padding: 15px; border-left: 4px solid #2b6cb0; margin-bottom: 25px; }
+        .kpis { display: flex; gap: 10px; margin: 15px 0; }
+        .kpi { flex: 1; text-align: center; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; }
+        .kpi .n { font-size: 20pt; font-weight: bold; color: #1a365d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9.5pt; }
+        th, td { border: 1px solid #cbd5e0; padding: 6px 8px; text-align: left; }
+        th { background: #edf2f7; }
+        .risk-crítico { color: #9b2c2c; font-weight: bold; }
+        .risk-alto { color: #e53e3e; font-weight: bold; }
+        .risk-medio { color: #d69e2e; font-weight: bold; }
+        .risk-bajo { color: #38a169; font-weight: bold; }
+        .tag { display: inline-block; background: #e53e3e; color: #fff; font-size: 8pt; padding: 1px 5px; border-radius: 3px; }
+        .footer { margin-top: 35px; font-size: 9pt; color: #718096; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>INFORME DE AUDITORÍA WI-FI</h1>
+        <p><em>Generado por CIBERNAV — Uso interno / no clasificado</em></p>
+    </div>
+
+    <div class="summary">
+        <h2>Resumen ejecutivo</h2>
+        <p>Reconocimiento del entorno inalámbrico. Se detectaron <strong>{{ resumen.total }}</strong> redes y <strong>{{ resumen.clientes }}</strong> clientes durante la ventana de captura.</p>
+        <div class="kpis">
+            <div class="kpi"><div class="n">{{ resumen.total }}</div>Redes</div>
+            <div class="kpi"><div class="n">{{ resumen.clientes }}</div>Clientes</div>
+            <div class="kpi"><div class="n" style="color:#e53e3e">{{ resumen.abiertas }}</div>Abiertas</div>
+            <div class="kpi"><div class="n" style="color:#d69e2e">{{ resumen.wps }}</div>Con WPS</div>
+            <div class="kpi"><div class="n" style="color:#9b2c2c">{{ resumen.wep }}</div>WEP</div>
+        </div>
+    </div>
+
+    <h2>Redes detectadas</h2>
+    <table>
+        <thead><tr>
+            <th>ESSID</th><th>BSSID</th><th>Ch</th><th>Señal</th><th>Cifrado</th><th>Riesgo</th><th>WPS</th><th>Clientes</th>
+        </tr></thead>
+        <tbody>
+        {% for r in redes %}
+            <tr>
+                <td>{{ r.ssid }}</td>
+                <td>{{ r.bssid }}</td>
+                <td>{{ r.channel }}</td>
+                <td>{{ r.power }}</td>
+                <td>{{ r.cipher_info.nombre }}</td>
+                <td class="risk-{{ r.cipher_info.riesgo|lower }}">{{ r.cipher_info.riesgo }}</td>
+                <td>{% if r.wps %}<span class="tag">WPS</span>{% else %}—{% endif %}</td>
+                <td>{{ r.clientes }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="8">No se registraron redes.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Riesgos por tipo de cifrado</h2>
+    <p>Las redes <strong>abiertas</strong> y con <strong>WEP</strong> deben corregirse de inmediato; el <strong>WPS</strong> activo permite ataques de recuperación del PIN. Recomendación general: WPA2/WPA3 con contraseña robusta y WPS desactivado.</p>
+
+    <div class="footer">
+        Generado el {{ generado }} · CIBERNAV — Suite de auditoría de seguridad de redes.<br>
+        Uso exclusivo para auditorías autorizadas.
+    </div>
+</body>
+</html>

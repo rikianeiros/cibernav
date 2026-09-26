@@ -124,12 +124,15 @@ const app = (() => {
       const k = r.knowledge || {};
       const cves = (r.cves || []).map((c) =>
         `<p class="cve">⚠ <b>${c.cve}</b> [${c.severidad}] — ${c.descripcion}</p>`).join("");
+      const vuln = (r.vulners || []).slice(0, 12).map((c) =>
+        `<p class="cve">◆ <b>${c.cve}</b> CVSS ${c.cvss} [${c.severidad}]</p>`).join("")
+        + ((r.vulners || []).length > 12 ? `<p class="hint">… y ${r.vulners.length - 12} más (vulners)</p>` : "");
       return `<div class="finding r-${RISK[k.riesgo] || "desc"}">
         <div class="fh"><b>${k.servicio || r.service}</b> <span class="port">${r.port}/tcp ${r.version || ""}</span>
           <span class="badge ${RISK[k.riesgo] || "desc"}">${k.riesgo || "?"}</span></div>
         <p>${k.descripcion || ""}</p>
         <p class="rec">→ ${k.recomendacion || ""}</p>
-        ${cves}
+        ${cves}${vuln}
       </div>`;
     }).join("");
   }
@@ -191,7 +194,7 @@ const app = (() => {
     stopScan() { act(() => api("/api/scan/stop", "POST")); },
     wpsScan() { act(async () => { const r = await api("/api/wps/scan", "POST"); if (r.error) return alert(r.error); alert(`WPS detectado en ${r.wps_bssids.length} red(es).`); }); },
     deauth(bssid) { if (!bssid) return; act(() => api(`/api/attack/deauth?${qs({ bssid })}`, "POST")); },
-    scanPorts() { const ip = $("nmap-ip").value.trim(); if (!ip) return; $("nmap-results").innerHTML = `<p class="hint">Escaneando ${ip}…</p>`; act(() => api(`/api/ports/scan?${qs({ target_ip: ip, profile: $("nmap-profile").value })}`, "POST")); },
+    scanPorts() { const ip = $("nmap-ip").value.trim(); if (!ip) return; const v = $("nmap-vulners") && $("nmap-vulners").checked; $("nmap-results").innerHTML = `<p class="hint">Escaneando ${ip}${v ? " con vulners (puede tardar)" : ""}…</p>`; act(() => api(`/api/ports/scan?${qs({ target_ip: ip, profile: $("nmap-profile").value, vulners: !!v })}`, "POST")); },
     async inventoryScan() {
       const target = $("inv-target").value.trim(), objetivo = $("inv-name").value.trim();
       if (!target || !objetivo) return alert("Indica red/host y nombre del objetivo.");
