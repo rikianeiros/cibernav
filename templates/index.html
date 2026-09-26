@@ -51,6 +51,7 @@
             <button class="ghost" onclick="app.stopMonitor()">Detener</button>
             <button onclick="app.startScan()">▶ Escanear</button>
             <button class="ghost" onclick="app.stopScan()">■ Parar escaneo</button>
+            <button class="ghost" onclick="app.wpsScan()">Detectar WPS (wash)</button>
         </div>
         <table class="data"><thead><tr>
             <th>BSSID</th><th>ESSID</th><th>Canal</th><th>Cifrado</th><th>Señal</th><th>Acción</th>
@@ -69,6 +70,12 @@
                 <option value="completo">Completo</option>
             </select>
             <button onclick="app.scanPorts()">Escanear puertos</button>
+        </div>
+        <div class="row cvebar">
+            <span id="cve-info" class="hint"></span>
+            <input id="cve-url" placeholder="URL de feed de CVEs (JSON)">
+            <button class="ghost" onclick="app.updateCves()">Actualizar CVEs</button>
+            <button class="ghost" onclick="app.reloadCves()">Recargar</button>
         </div>
         <div id="nmap-results"></div>
     </section>

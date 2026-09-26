@@ -30,6 +30,36 @@ def disable_monitor_mode(interface: str):
     # Restart network manager so we get internet back on wlan0
     subprocess.run(["sudo", "systemctl", "start", "NetworkManager"], timeout=10)
 
+def parse_wash_output(text: str) -> set[str]:
+    """
+    Extrae los BSSID con WPS activo de la salida de `wash`. Busca direcciones MAC
+    al principio de cada línea (formato AA:BB:CC:DD:EE:FF), ignorando cabeceras.
+    """
+    bssids = set()
+    mac_re = re.compile(r"^\s*([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})\b")
+    for line in text.splitlines():
+        m = mac_re.match(line)
+        if m:
+            bssids.add(m.group(1).upper())
+    return bssids
+
+
+def scan_wps(interface: str, duracion: int = 10) -> set[str]:
+    """
+    Ejecuta `wash` sobre la interfaz en modo monitor durante `duracion` segundos
+    y devuelve el conjunto de BSSID con WPS habilitado. Requiere la herramienta
+    `wash` (paquete reaver) y modo monitor activo.
+    """
+    try:
+        proc = subprocess.run(
+            ["sudo", "timeout", str(duracion), "wash", "-i", interface],
+            capture_output=True, text=True, timeout=duracion + 5,
+        )
+        return parse_wash_output(proc.stdout)
+    except Exception:
+        return set()
+
+
 def parse_airodump_csv(csv_path: str) -> tuple[dict, dict]:
     networks = {}
     clients = {}

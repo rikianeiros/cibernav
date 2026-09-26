@@ -122,11 +122,14 @@ const app = (() => {
     if (!results || !results.length) { box.innerHTML = `<p class="hint">Sin puertos abiertos en ${target}.</p>`; return; }
     box.innerHTML = `<h3>${target}</h3>` + results.map((r) => {
       const k = r.knowledge || {};
+      const cves = (r.cves || []).map((c) =>
+        `<p class="cve">⚠ <b>${c.cve}</b> [${c.severidad}] — ${c.descripcion}</p>`).join("");
       return `<div class="finding r-${RISK[k.riesgo] || "desc"}">
-        <div class="fh"><b>${k.servicio || r.service}</b> <span class="port">${r.port}/tcp</span>
+        <div class="fh"><b>${k.servicio || r.service}</b> <span class="port">${r.port}/tcp ${r.version || ""}</span>
           <span class="badge ${RISK[k.riesgo] || "desc"}">${k.riesgo || "?"}</span></div>
         <p>${k.descripcion || ""}</p>
         <p class="rec">→ ${k.recomendacion || ""}</p>
+        ${cves}
       </div>`;
     }).join("");
   }
@@ -135,7 +138,23 @@ const app = (() => {
   const act = async (fn) => { try { return await fn(); } catch (e) { alert(e.message); } };
 
   return {
-    init() { loadCapabilities(); connectWS(); this.loadScans(); this.loadCaptures(); setInterval(loadCapabilities, 15000); },
+    init() { loadCapabilities(); connectWS(); this.loadScans(); this.loadCaptures(); this.loadCveInfo(); setInterval(loadCapabilities, 15000); },
+    async loadCveInfo() {
+      try {
+        const i = await api("/api/vulns");
+        if ($("cve-info")) $("cve-info").textContent = `Base de CVEs: ${i.n} reglas · actualizado ${i.actualizado || "—"}`;
+      } catch (e) {}
+    },
+    updateCves() {
+      const url = $("cve-url").value.trim();
+      act(async () => {
+        const r = await api(`/api/vulns/update?${qs(url ? { url } : {})}`, "POST");
+        if (r.error) return alert(r.error);
+        alert(`Base de CVEs actualizada: ${r.reglas} reglas (${r.nuevas} del feed).`);
+        this.loadCveInfo();
+      });
+    },
+    reloadCves() { act(async () => { await api("/api/vulns/reload", "POST"); this.loadCveInfo(); }); },
     async loadCaptures() {
       try {
         const r = await api("/api/captures");
@@ -170,6 +189,7 @@ const app = (() => {
     stopMonitor() { act(() => api("/api/monitor/stop", "POST")); },
     startScan() { act(() => api("/api/scan/start", "POST")); },
     stopScan() { act(() => api("/api/scan/stop", "POST")); },
+    wpsScan() { act(async () => { const r = await api("/api/wps/scan", "POST"); if (r.error) return alert(r.error); alert(`WPS detectado en ${r.wps_bssids.length} red(es).`); }); },
     deauth(bssid) { if (!bssid) return; act(() => api(`/api/attack/deauth?${qs({ bssid })}`, "POST")); },
     scanPorts() { const ip = $("nmap-ip").value.trim(); if (!ip) return; $("nmap-results").innerHTML = `<p class="hint">Escaneando ${ip}…</p>`; act(() => api(`/api/ports/scan?${qs({ target_ip: ip, profile: $("nmap-profile").value })}`, "POST")); },
     async inventoryScan() {

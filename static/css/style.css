@@ -150,6 +150,8 @@ table.data tr:hover td { background: var(--panel); }
 .finding .rec { color: var(--grn); font-size: 12px; }
 .finding .rec::before { content: ""; }
 .finding p { margin: 3px 0; }
+.finding .cve { color: var(--red); font-size: 12px; background: #140606; border: 1px solid #3a1010; padding: 4px 8px; margin-top: 5px; }
+.finding .cve b { color: var(--red); }
 .badge { font-size: 10px; padding: 1px 7px; font-weight: 700; margin-left: auto; letter-spacing: .05em; border: 1px solid; }
 .badge.crit { color: var(--red); border-color: var(--red); }
 .badge.alto { color: var(--amber); border-color: var(--amber); }

@@ -12,6 +12,7 @@ Ejecutar desde la raíz del proyecto:
 """
 import os
 import sys
+import json
 import asyncio
 import types
 import tempfile
@@ -23,6 +24,7 @@ os.environ.setdefault("CIBERNAV_PASS", "test")
 _tmp = tempfile.mkdtemp(prefix="cibernav_test_")
 os.environ["CIBERNAV_DATA_DIR"] = _tmp
 os.environ["CIBERNAV_DB_PATH"] = os.path.join(_tmp, "test.db")
+os.environ["CIBERNAV_CVE_FILE"] = os.path.join(_tmp, "cve_rules.json")  # no tocar el JSON del repo
 
 
 def test_knowledge():
@@ -213,6 +215,57 @@ def test_diff_escaneos():
     assert igual["sin_cambios"] is True
     # id inexistente -> None
     assert dm.comparar_escaneos(b_id, 99999) is None
+
+
+def test_vulns_cve():
+    from modules import vulns
+    # vsftpd 2.3.4 -> backdoor conocido
+    r = vulns.match_cves("ftp", "vsftpd 2.3.4")
+    assert any("2011-2523" in c["cve"] for c in r)
+    # vsftpd 3.0.3 -> no debe casar la regla de 2.3.4
+    assert vulns.match_cves("ftp", "vsftpd 3.0.3") == []
+    # OpenSSH 7.2 (< 7.7) -> enumeración de usuarios
+    r = vulns.match_cves("ssh", "OpenSSH 7.2")
+    assert any("2018-15473" in c["cve"] for c in r)
+    # OpenSSH 8.0 (>= 7.7) -> sin ese CVE
+    assert vulns.match_cves("ssh", "OpenSSH 8.0") == []
+    # Apache 2.4.49 -> path traversal
+    assert any("2021-41773" in c["cve"] for c in vulns.match_cves("http", "Apache httpd 2.4.49"))
+    # Samba en rango vulnerable
+    assert any("2017-7494" in c["cve"] for c in vulns.match_cves("netbios-ssn", "Samba smbd 4.3.11"))
+    # servicio sin coincidencia
+    assert vulns.match_cves("http", "nginx 1.25.0") == []
+
+
+def test_vulns_update_from_file():
+    from modules import vulns
+    # feed local con una regla nueva; se actualiza vía file:// y se recarga
+    feed = os.path.join(_tmp, "feed.json")
+    regla = [{"match": "nginx", "versions": ["1.20.0"], "cve": "CVE-TEST-0001",
+              "severidad": "ALTO", "descripcion": "Regla de prueba para nginx 1.20.0."}]
+    with open(feed, "w") as f:
+        json.dump(regla, f)
+    n_antes = vulns.info()["n"]
+    res = vulns.update_from_url("file://" + feed, merge=True)
+    assert res.get("ok") is True
+    assert vulns.info()["n"] >= n_antes  # fusionó sin perder las previas
+    # la regla nueva ya casa
+    assert any(c["cve"] == "CVE-TEST-0001" for c in vulns.match_cves("http", "nginx 1.20.0"))
+    # feed inexistente -> error controlado, sin romper
+    assert "error" in vulns.update_from_url("file:///no/existe/x.json")
+
+
+def test_wash_parser():
+    from modules import scanner
+    salida = (
+        "BSSID               Ch  dBm  WPS  Lck  ESSID\n"
+        "--------------------------------------------\n"
+        "AA:BB:CC:DD:EE:01    6  -40  2.0  No   MiRouter\n"
+        "11:22:33:44:55:66    1  -60  1.0  No   Vecino\n"
+    )
+    bssids = scanner.parse_wash_output(salida)
+    assert bssids == {"AA:BB:CC:DD:EE:01", "11:22:33:44:55:66"}
+    assert scanner.parse_wash_output("sin nada aquí") == set()
 
 
 def _run_all():

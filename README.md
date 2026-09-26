@@ -16,6 +16,8 @@ Construida sobre FastAPI, con actualizaciones en tiempo real por WebSocket. Est�
 ### Análisis de host
 - Escaneo de puertos con **nmap** (perfiles rápido / estándar / completo).
 - Cada servicio se traduce a: qué es, nivel de riesgo, implicaciones y recomendación.
+- **Detección de CVEs conocidos** por servicio/versión (p. ej. vsftpd 2.3.4, Apache 2.4.49, SambaCry). La base de reglas vive en `data/cve_rules.json`, es **editable** y se puede **actualizar desde un feed** (`CIBERNAV_CVE_FEED`) o recargar en caliente. No es un escáner CVE exhaustivo, sino conocimiento curado de casos conocidos.
+- **Detección real de WPS** con `wash` (marca las redes con WPS habilitado).
 
 ### Inventario e informes
 - Escaneo de inventario por **objetivo** (una casa, una oficina, un buque) con persistencia en SQLite.

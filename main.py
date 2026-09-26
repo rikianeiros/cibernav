@@ -28,12 +28,12 @@ from config import (
     WEB_AUTH_USER, WEB_AUTH_PASS, AUTH_PASS_IS_RANDOM, BASE_DIR,
     POLL_INTERVAL_SEC, SCAN_OUTPUT_PREFIX, SCAN_CSV_PATH, NMEA_PORTS, PASSIVE_DEFAULT,
 )
-from modules.scanner import enable_monitor_mode, disable_monitor_mode, parse_airodump_csv
+from modules.scanner import enable_monitor_mode, disable_monitor_mode, parse_airodump_csv, scan_wps
 from modules.alert_engine import alert_engine
 from modules.attacker import attack_manager
 from modules.nmap_scanner import nmap_scanner
 from modules.bettercap import bettercap_client
-from modules import nmea, system_check, report
+from modules import nmea, system_check, report, vulns
 from modules.cracker import crack_manager
 from modules.database import init_db, db_manager
 
@@ -80,6 +80,7 @@ class AppState:
         self.monitor_interface = None
         self.networks = {}
         self.clients = {}
+        self.wps_bssids = set()
         self.passive = PASSIVE_DEFAULT
 
 
@@ -123,6 +124,12 @@ async def scan_loop():
     while state.scanning:
         if os.path.exists(SCAN_CSV_PATH):
             networks, clients = parse_airodump_csv(SCAN_CSV_PATH)
+            # Marcar WPS con lo detectado por wash (si se ha lanzado)
+            for bssid, net in networks.items():
+                if bssid.upper() in state.wps_bssids:
+                    net["wps"] = True
+                    if "WPS_ENABLED" not in net["flags"]:
+                        net["flags"].append("WPS_ENABLED")
             state.networks = networks
             state.clients = clients
             await manager.broadcast({
@@ -200,6 +207,19 @@ async def start_scan(username: str = Depends(verify_credentials)):
     asyncio.create_task(scan_loop())
     alert_engine.add_alert("INFO", "Escaneo Wi-Fi iniciado")
     return {"status": "started"}
+
+
+@app.post("/api/wps/scan")
+async def wps_scan(duracion: int = 10, username: str = Depends(verify_credentials)):
+    """Detección real de WPS con wash (escucha pasiva, no ofensiva)."""
+    if not state.monitor_interface:
+        return {"error": "Modo monitor no activo"}
+    loop = asyncio.get_event_loop()
+    bssids = await loop.run_in_executor(None, lambda: scan_wps(state.monitor_interface, duracion))
+    state.wps_bssids |= {b.upper() for b in bssids}
+    if bssids:
+        alert_engine.add_alert("HIGH", f"WPS activo detectado en {len(bssids)} red(es)", "scanner")
+    return {"wps_bssids": sorted(state.wps_bssids)}
 
 
 @app.post("/api/scan/stop")
@@ -321,6 +341,26 @@ async def crack_hashcat(capture: str, wordlist: str = None, username: str = Depe
 @app.post("/api/crack/stop/{job_id}")
 async def crack_stop(job_id: str, username: str = Depends(verify_credentials)):
     return {"status": "stopped" if crack_manager.stop(job_id) else "not_found"}
+
+
+# --- Base de CVEs (actualizable) ---
+@app.get("/api/vulns")
+async def vulns_info(username: str = Depends(verify_credentials)):
+    return vulns.info()
+
+
+@app.post("/api/vulns/reload")
+async def vulns_reload(username: str = Depends(verify_credentials)):
+    return vulns.reload_rules()
+
+
+@app.post("/api/vulns/update")
+async def vulns_update(url: str = "", merge: bool = True, username: str = Depends(verify_credentials)):
+    loop = asyncio.get_event_loop()
+    res = await loop.run_in_executor(None, lambda: vulns.update_from_url(url, merge=merge))
+    if res.get("ok"):
+        alert_engine.add_alert("INFO", f"Base de CVEs actualizada ({res['reglas']} reglas)", "vulns")
+    return res
 
 
 # --- Modo naval: NMEA ---

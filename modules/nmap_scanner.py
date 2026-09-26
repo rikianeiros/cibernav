@@ -1,6 +1,7 @@
 import nmap
 import asyncio
 from modules.knowledge import PORT_KNOWLEDGE
+from modules.vulns import match_cves
 
 class NmapScanner:
     def __init__(self):
@@ -46,9 +47,10 @@ class NmapScanner:
                 state = nm[target_ip][proto][port]['state']
                 if state != 'open': continue
 
-                service = nm[target_ip][proto][port].get('name', 'unknown')
-                version = nm[target_ip][proto][port].get('version', '')
-                
+                pdata = nm[target_ip][proto][port]
+                service = pdata.get('name', 'unknown')
+                banner = f"{pdata.get('product', '')} {pdata.get('version', '')}".strip()
+
                 knowledge = PORT_KNOWLEDGE.get(port, {
                     "servicio": f"{service}",
                     "riesgo": "DESCONOCIDO",
@@ -61,8 +63,9 @@ class NmapScanner:
                     "port": port,
                     "state": state,
                     "service": service,
-                    "version": version,
-                    "knowledge": knowledge
+                    "version": banner,
+                    "knowledge": knowledge,
+                    "cves": match_cves(service, banner),
                 })
 
         return results
