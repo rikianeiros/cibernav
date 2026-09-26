@@ -155,6 +155,58 @@ class DBManager:
                 "objetivo": esc["objetivo"], "hosts": hosts,
             }
 
+    @staticmethod
+    def _clave_host(h: dict) -> str:
+        """Identificador estable de un host: MAC si es real, si no la IP."""
+        mac = h.get("mac", "")
+        if mac and mac != "Desconocida" and not mac.startswith("NO_MAC"):
+            return mac
+        return h.get("ip", "?")
+
+    def comparar_escaneos(self, base_id: int, target_id: int) -> dict | None:
+        """
+        Compara dos escaneos (idealmente del mismo objetivo) y devuelve qué ha
+        cambiado: dispositivos nuevos, desaparecidos, y puertos abiertos/cerrados
+        en los que siguen presentes.
+        """
+        base = self.obtener_escaneo(base_id)
+        target = self.obtener_escaneo(target_id)
+        if not base or not target:
+            return None
+
+        def indexar(scan):
+            idx = {}
+            for h in scan["hosts"]:
+                idx[self._clave_host(h)] = {
+                    "host": h,
+                    "puertos": {(s["protocolo"], s["puerto"]) for s in h["servicios"]},
+                }
+            return idx
+
+        b, t = indexar(base), indexar(target)
+        nuevos = [t[k]["host"] for k in t if k not in b]
+        desaparecidos = [b[k]["host"] for k in b if k not in t]
+        cambios = []
+        for k in t:
+            if k not in b:
+                continue
+            abiertos = sorted(t[k]["puertos"] - b[k]["puertos"], key=lambda x: x[1])
+            cerrados = sorted(b[k]["puertos"] - t[k]["puertos"], key=lambda x: x[1])
+            if abiertos or cerrados:
+                cambios.append({
+                    "dispositivo": t[k]["host"],
+                    "puertos_abiertos": [{"protocolo": p, "puerto": n} for p, n in abiertos],
+                    "puertos_cerrados": [{"protocolo": p, "puerto": n} for p, n in cerrados],
+                })
+        return {
+            "base": {"id": base["id"], "fecha": base["fecha"], "objetivo": base["objetivo"]},
+            "target": {"id": target["id"], "fecha": target["fecha"], "objetivo": target["objetivo"]},
+            "dispositivos_nuevos": nuevos,
+            "dispositivos_desaparecidos": desaparecidos,
+            "cambios_puertos": cambios,
+            "sin_cambios": not (nuevos or desaparecidos or cambios),
+        }
+
     def listar_escaneos(self) -> list[dict]:
         with get_connection() as conn:
             rows = conn.execute(

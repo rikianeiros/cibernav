@@ -26,7 +26,7 @@ from datetime import datetime
 
 from config import (
     WEB_AUTH_USER, WEB_AUTH_PASS, AUTH_PASS_IS_RANDOM, BASE_DIR,
-    POLL_INTERVAL_SEC, SCAN_OUTPUT_PREFIX, SCAN_CSV_PATH, NMEA_PORTS,
+    POLL_INTERVAL_SEC, SCAN_OUTPUT_PREFIX, SCAN_CSV_PATH, NMEA_PORTS, PASSIVE_DEFAULT,
 )
 from modules.scanner import enable_monitor_mode, disable_monitor_mode, parse_airodump_csv
 from modules.alert_engine import alert_engine
@@ -80,9 +80,19 @@ class AppState:
         self.monitor_interface = None
         self.networks = {}
         self.clients = {}
+        self.passive = PASSIVE_DEFAULT
 
 
 state = AppState()
+
+
+def ensure_active():
+    """Bloquea las acciones ofensivas cuando el modo pasivo está activo."""
+    if state.passive:
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="Modo pasivo activo: las acciones ofensivas (ataques y crackeo) están deshabilitadas.",
+        )
 
 
 class ConnectionManager:
@@ -138,7 +148,21 @@ async def index(request: Request, username: str = Depends(verify_credentials)):
 
 @app.get("/api/capabilities")
 async def capabilities(username: str = Depends(verify_credentials)):
-    return system_check.get_capabilities()
+    data = system_check.get_capabilities()
+    data["passive"] = state.passive
+    return data
+
+
+@app.get("/api/mode")
+async def get_mode(username: str = Depends(verify_credentials)):
+    return {"passive": state.passive}
+
+
+@app.post("/api/mode")
+async def set_mode(passive: bool, username: str = Depends(verify_credentials)):
+    state.passive = passive
+    alert_engine.add_alert("INFO", f"Modo pasivo {'activado' if passive else 'desactivado'}", "system")
+    return {"passive": state.passive}
 
 
 # --- Wi-Fi ---
@@ -199,6 +223,7 @@ async def attack_ws_callback(attack_id: str, line: str, finished: bool = False):
 
 @app.post("/api/attack/deauth")
 async def attack_deauth(bssid: str, client_mac: str = None, count: int = 10, username: str = Depends(verify_credentials)):
+    ensure_active()
     if not state.monitor_interface:
         return {"error": "Modo monitor no activo"}
     attack_id = await attack_manager.launch_deauth(state.monitor_interface, bssid, client_mac, count, attack_ws_callback)
@@ -208,6 +233,7 @@ async def attack_deauth(bssid: str, client_mac: str = None, count: int = 10, use
 
 @app.post("/api/attack/pmkid")
 async def attack_pmkid(channel: int, username: str = Depends(verify_credentials)):
+    ensure_active()
     if not state.monitor_interface:
         return {"error": "Modo monitor no activo"}
     attack_id, pcap_path = await attack_manager.launch_pmkid_attack(state.monitor_interface, channel, attack_ws_callback)
@@ -252,6 +278,15 @@ async def list_scans(username: str = Depends(verify_credentials)):
     return {"scans": db_manager.listar_escaneos()}
 
 
+@app.get("/api/diff")
+async def diff_scans(base_id: int, target_id: int, username: str = Depends(verify_credentials)):
+    """Compara dos escaneos: qué dispositivos/puertos han cambiado entre ambos."""
+    resultado = db_manager.comparar_escaneos(base_id, target_id)
+    if resultado is None:
+        raise HTTPException(status_code=404, detail="Uno de los escaneos no existe")
+    return resultado
+
+
 # --- Crackeo de handshakes ---
 async def crack_ws_callback(job_id: str, line: str, finished: bool = False, key: str = None):
     msg = {"type": "crack_finished" if finished else "crack_output", "id": job_id, "line": line}
@@ -267,6 +302,7 @@ async def list_captures(username: str = Depends(verify_credentials)):
 
 @app.post("/api/crack/aircrack")
 async def crack_aircrack(capture: str, bssid: str = None, wordlist: str = None, username: str = Depends(verify_credentials)):
+    ensure_active()
     res = await crack_manager.crack_aircrack(capture, bssid, wordlist, crack_ws_callback)
     if "error" not in res:
         alert_engine.add_alert("WARNING", f"Crackeo (aircrack) iniciado sobre {os.path.basename(capture)}", "cracker")
@@ -275,6 +311,7 @@ async def crack_aircrack(capture: str, bssid: str = None, wordlist: str = None, 
 
 @app.post("/api/crack/hashcat")
 async def crack_hashcat(capture: str, wordlist: str = None, username: str = Depends(verify_credentials)):
+    ensure_active()
     res = await crack_manager.crack_hashcat(capture, wordlist, crack_ws_callback)
     if "error" not in res:
         alert_engine.add_alert("WARNING", f"Crackeo (hashcat) iniciado sobre {os.path.basename(capture)}", "cracker")

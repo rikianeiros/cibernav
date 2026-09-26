@@ -10,6 +10,8 @@ h3 { margin: 18px 0 8px; color: var(--accent); font-size: 14px; text-transform: 
 .topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: var(--panel2); border-bottom: 1px solid var(--line); }
 .brand { font-weight: 700; font-size: 18px; letter-spacing: .02em; }
 .brand .tag { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 10px; }
+.topright { display: flex; align-items: center; gap: 16px; }
+.passive-toggle { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .ws-status { font-size: 12px; }
 .ws-status.on { color: var(--bajo); }
 .ws-status.off { color: var(--desc); }

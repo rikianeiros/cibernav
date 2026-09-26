@@ -47,3 +47,9 @@ DEFAULT_WORDLIST = os.environ.get("CIBERNAV_WORDLIST", "/usr/share/wordlists/roc
 
 # --- Puertos NMEA (modo naval) ---
 NMEA_PORTS = [10110, 2000]
+
+# --- Modo pasivo (solo lectura) ---
+# Si se activa, se bloquean las acciones ofensivas (ataques y crackeo) y solo
+# se permite el análisis pasivo. Útil para auditorías donde no está autorizado
+# emitir tráfico contra la red.
+PASSIVE_DEFAULT = os.environ.get("CIBERNAV_PASSIVE", "").lower() in ("1", "true", "yes", "si", "sí")

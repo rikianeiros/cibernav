@@ -25,8 +25,11 @@ const app = (() => {
     try { data = await api("/api/capabilities"); }
     catch (e) { return; }
     const banner = $("cap-banner");
-    if (data.warnings && data.warnings.length) {
-      banner.innerHTML = data.warnings.map((w) => `<div>⚠ ${w}</div>`).join("");
+    const warns = (data.warnings || []).slice();
+    if (data.passive) { warns.unshift("🔒 Modo pasivo activo: ataques y crackeo deshabilitados."); }
+    if ($("passive-chk")) $("passive-chk").checked = !!data.passive;
+    if (warns.length) {
+      banner.innerHTML = warns.map((w) => `<div>${w.startsWith("🔒") ? w : "⚠ " + w}</div>`).join("");
       banner.classList.remove("hidden");
     } else { banner.classList.add("hidden"); }
 
@@ -183,11 +186,24 @@ const app = (() => {
     async loadScans() {
       try {
         const r = await api("/api/scans");
-        $("scan-rows").innerHTML = (r.scans || []).map((s) =>
+        const scans = r.scans || [];
+        $("scan-rows").innerHTML = scans.map((s) =>
           `<tr><td>${s.id}</td><td>${s.objetivo}</td><td>${s.tipo_escaneo}</td><td>${s.fecha}</td>
            <td><a class="mini" href="/api/report/${s.id}" target="_blank">ver informe</a></td></tr>`
         ).join("") || `<tr><td colspan="5" class="hint">Aún no hay escaneos.</td></tr>`;
+        const opts = scans.map((s) => `<option value="${s.id}">#${s.id} · ${s.objetivo} · ${s.fecha}</option>`).join("");
+        if ($("diff-base")) $("diff-base").innerHTML = opts;
+        if ($("diff-target")) $("diff-target").innerHTML = opts;
       } catch (e) {}
+    },
+    setPassive(on) {
+      act(async () => { await api(`/api/mode?passive=${on}`, "POST"); loadCapabilities(); });
+    },
+    async diff() {
+      const b = $("diff-base").value, t = $("diff-target").value;
+      if (!b || !t) return alert("Necesitas dos escaneos guardados.");
+      if (b === t) return alert("Elige dos escaneos distintos.");
+      await act(async () => renderDiff(await api(`/api/diff?${qs({ base_id: b, target_id: t })}`)));
     },
     async nmea() {
       const ip = $("nmea-ip").value.trim(), puerto = $("nmea-port").value || 10110;
@@ -200,6 +216,30 @@ const app = (() => {
       await act(async () => { const r = await api(`/api/naval/nmea/auto?${qs({ ip })}`, "POST"); renderNmea(r.resultados); });
     },
   };
+
+  function renderDiff(d) {
+    const box = $("diff-result");
+    if (d.sin_cambios) {
+      box.innerHTML = `<div class="finding r-bajo"><p>Sin cambios entre el escaneo #${d.base.id} y el #${d.target.id}.</p></div>`;
+      return;
+    }
+    const dev = (h) => `${h.ip} <small class="mono">${h.mac || ""}</small> ${h.fabricante || ""}`;
+    const ports = (list) => list.map((p) => `${p.protocolo}/${p.puerto}`).join(", ");
+    let html = `<p class="hint">Comparando #${d.base.id} (${d.base.fecha}) → #${d.target.id} (${d.target.fecha})</p>`;
+    if (d.dispositivos_nuevos.length)
+      html += `<div class="finding r-alto"><div class="fh"><b>🆕 Dispositivos nuevos (${d.dispositivos_nuevos.length})</b></div>`
+        + d.dispositivos_nuevos.map((h) => `<p>+ ${dev(h)}</p>`).join("") + `</div>`;
+    if (d.dispositivos_desaparecidos.length)
+      html += `<div class="finding r-medio"><div class="fh"><b>➖ Desaparecidos (${d.dispositivos_desaparecidos.length})</b></div>`
+        + d.dispositivos_desaparecidos.map((h) => `<p>− ${dev(h)}</p>`).join("") + `</div>`;
+    d.cambios_puertos.forEach((c) => {
+      html += `<div class="finding r-alto"><div class="fh"><b>${dev(c.dispositivo)}</b></div>`;
+      if (c.puertos_abiertos.length) html += `<p class="rec">▲ Puertos abiertos: ${ports(c.puertos_abiertos)}</p>`;
+      if (c.puertos_cerrados.length) html += `<p>▼ Puertos cerrados: ${ports(c.puertos_cerrados)}</p>`;
+      html += `</div>`;
+    });
+    box.innerHTML = html;
+  }
 
   function renderNmea(list) {
     $("nmea-result").innerHTML = list.map((res) => {

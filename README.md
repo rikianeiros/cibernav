@@ -19,7 +19,11 @@ Construida sobre FastAPI, con actualizaciones en tiempo real por WebSocket. Est�
 
 ### Inventario e informes
 - Escaneo de inventario por **objetivo** (una casa, una oficina, un buque) con persistencia en SQLite.
+- **Comparación entre escaneos (diff)**: dispositivos nuevos o desaparecidos y puertos que se han abierto o cerrado desde la última auditoría.
 - **Informe ejecutivo** en PDF (o HTML si WeasyPrint no está disponible), presentable para un cliente.
+
+### Modo pasivo
+- Interruptor que **bloquea todas las acciones ofensivas** (ataques y crackeo) dejando solo el análisis pasivo, para auditorías donde no está autorizado emitir tráfico contra la red. Se puede fijar por defecto con `CIBERNAV_PASSIVE=1`.
 
 ### Modo naval (NMEA)
 - Prueba de concepto que comprueba si los **datos de navegación** (posición GPS, rumbo, velocidad) viajan en claro por la red, sin cifrado ni autenticación.

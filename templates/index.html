@@ -9,7 +9,12 @@
 <body>
 <header class="topbar">
     <div class="brand">⚓ CIBERNAV<span class="tag">auditoría Wi-Fi · IoT · naval</span></div>
-    <div id="ws-status" class="ws-status off">● desconectado</div>
+    <div class="topright">
+        <label class="passive-toggle" title="Bloquea ataques y crackeo; solo análisis pasivo">
+            <input type="checkbox" id="passive-chk" onchange="app.setPassive(this.checked)"> Modo pasivo
+        </label>
+        <span id="ws-status" class="ws-status off">● desconectado</span>
+    </div>
 </header>
 
 <div id="cap-banner" class="cap-banner hidden"></div>
@@ -95,6 +100,16 @@
         <table class="data"><thead><tr>
             <th>#</th><th>Objetivo</th><th>Tipo</th><th>Fecha</th><th>Informe</th>
         </tr></thead><tbody id="scan-rows"></tbody></table>
+
+        <h3>Comparar escaneos (diff)</h3>
+        <p class="hint">Ve qué ha cambiado entre dos escaneos: dispositivos nuevos, desaparecidos y puertos abiertos/cerrados.</p>
+        <div class="row">
+            <select id="diff-base"></select>
+            <span class="hint">vs</span>
+            <select id="diff-target"></select>
+            <button onclick="app.diff()">Comparar</button>
+        </div>
+        <div id="diff-result"></div>
     </section>
 
     <!-- NAVAL -->

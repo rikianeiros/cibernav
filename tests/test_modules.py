@@ -187,6 +187,34 @@ def test_cracker():
     assert cracker.crack_manager.stop("inexistente") is False
 
 
+def test_diff_escaneos():
+    from modules import database
+    database.init_db()
+    dm = database.db_manager
+    base = [{"ip": "10.0.0.1", "mac": "AA:AA:AA:AA:AA:01", "vendor": "X", "os": "", "hostname": "",
+             "puertos": [{"puerto": 80, "protocolo": "tcp", "servicio": "http", "version": ""}]}]
+    target = [
+        {"ip": "10.0.0.1", "mac": "AA:AA:AA:AA:AA:01", "vendor": "X", "os": "", "hostname": "",
+         "puertos": [{"puerto": 80, "protocolo": "tcp", "servicio": "http", "version": ""},
+                     {"puerto": 23, "protocolo": "tcp", "servicio": "telnet", "version": ""}]},  # abre 23
+        {"ip": "10.0.0.9", "mac": "AA:AA:AA:AA:AA:09", "vendor": "Y", "os": "", "hostname": "",
+         "puertos": []},  # dispositivo nuevo
+    ]
+    b_id = dm.guardar_hosts("Diff Test", base, "base")
+    t_id = dm.guardar_hosts("Diff Test", target, "target")
+    d = dm.comparar_escaneos(b_id, t_id)
+    assert len(d["dispositivos_nuevos"]) == 1 and d["dispositivos_nuevos"][0]["ip"] == "10.0.0.9"
+    assert d["dispositivos_desaparecidos"] == []
+    assert len(d["cambios_puertos"]) == 1
+    assert d["cambios_puertos"][0]["puertos_abiertos"][0]["puerto"] == 23
+    assert d["sin_cambios"] is False
+    # mismo escaneo contra sí mismo -> sin cambios
+    igual = dm.comparar_escaneos(b_id, b_id)
+    assert igual["sin_cambios"] is True
+    # id inexistente -> None
+    assert dm.comparar_escaneos(b_id, 99999) is None
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     passed = 0
