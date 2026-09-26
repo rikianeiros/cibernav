@@ -33,7 +33,7 @@ from modules.alert_engine import alert_engine
 from modules.attacker import attack_manager
 from modules.nmap_scanner import nmap_scanner
 from modules.bettercap import bettercap_client
-from modules import nmea, system_check, report, vulns, recon
+from modules import nmea, system_check, report, vulns, recon, tor
 from modules.cracker import crack_manager
 from modules.database import init_db, db_manager
 
@@ -158,6 +158,23 @@ async def capabilities(username: str = Depends(verify_credentials)):
     data = system_check.get_capabilities()
     data["passive"] = state.passive
     return data
+
+
+@app.get("/api/tor")
+async def get_tor(check_ip: bool = False, username: str = Depends(verify_credentials)):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: tor.status(check_ip=check_ip))
+
+
+@app.post("/api/tor")
+async def set_tor(enabled: bool, username: str = Depends(verify_credentials)):
+    tor.state.enabled = enabled
+    if enabled and not tor.socks_available():
+        alert_engine.add_alert("WARNING", "Tor activado pero el SOCKS 9050 no responde", "tor")
+    else:
+        alert_engine.add_alert("INFO", f"Salida por Tor {'activada' if enabled else 'desactivada'}", "tor")
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: tor.status(check_ip=enabled))
 
 
 @app.get("/api/mode")

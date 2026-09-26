@@ -10,6 +10,10 @@
 <header class="topbar">
     <div class="brand">cibernav<span class="tag">auditoría wifi · iot · naval</span></div>
     <div class="topright">
+        <label class="passive-toggle" title="Enruta el tráfico saliente por Tor (recon web + HTTP de la app)">
+            <input type="checkbox" id="tor-chk" onchange="app.setTor(this.checked)"> Tor
+        </label>
+        <span id="tor-status" class="ws-status off" title="Estado de la salida por Tor"></span>
         <label class="passive-toggle" title="Bloquea ataques y crackeo; solo análisis pasivo">
             <input type="checkbox" id="passive-chk" onchange="app.setPassive(this.checked)"> Modo pasivo
         </label>

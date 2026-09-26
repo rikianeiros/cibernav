@@ -16,7 +16,8 @@ import re
 import shutil
 import json
 import subprocess
-import urllib.request
+
+from modules import tor
 
 # Dominio válido (sin esquema, sin barras, sin espacios).
 DOMAIN_RE = re.compile(r"^(?=.{1,253}$)(?!-)([a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,}$")
@@ -31,8 +32,9 @@ def _run(cmd: list[str], timeout: int = 60) -> dict:
     tool = cmd[0]
     if not shutil.which(tool):
         return {"herramienta": tool, "disponible": False, "salida": "", "error": f"{tool} no está instalado"}
+    run_cmd = tor.torify_cmd(cmd)  # antepone torsocks/proxychains si Tor está activo
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        p = subprocess.run(run_cmd, capture_output=True, text=True, timeout=timeout)
         salida = (p.stdout + ("\n" + p.stderr if p.stderr else ""))[-8000:]
         return {"herramienta": tool, "disponible": True, "salida": salida.strip(), "error": None}
     except subprocess.TimeoutExpired:
@@ -75,9 +77,7 @@ def subdomains_crtsh(domain: str, timeout: int = 20) -> dict:
     """Subdominios a partir de Certificate Transparency (crt.sh). Solo lectura."""
     url = f"https://crt.sh/?q=%25.{domain}&output=json"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "CIBERNAV"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            datos = json.loads(resp.read(3_000_000).decode("utf-8", errors="ignore"))
+        datos = json.loads(tor.http_get(url, timeout)[:3_000_000])
     except Exception as e:  # noqa: BLE001
         return {"herramienta": "crt.sh", "disponible": True, "subdominios": [], "error": str(e), "resumen": "sin datos"}
     subs = set()
@@ -125,7 +125,10 @@ def recon_pasivo(domain: str) -> dict:
 # ---------------- FASE ACTIVA ----------------
 
 def nmap_web(domain: str) -> dict:
-    r = _run(["nmap", "-sV", "-p", "80,443,8080,8443", "--script", "http-enum,http-headers,http-title", domain], 150)
+    # Con Tor solo funciona el connect scan (-sT); sin Tor dejamos que nmap elija.
+    modo = ["-sT"] if tor.state.enabled else []
+    r = _run(["nmap", *modo, "-sV", "-p", "80,443,8080,8443",
+              "--script", "http-enum,http-headers,http-title", domain], 150)
     r["resumen"] = f"{len(re.findall(r'/[a-z]', r['salida'] or ''))} rutas/cabeceras" if r["salida"] else "sin datos"
     return r
 

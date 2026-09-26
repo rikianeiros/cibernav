@@ -16,7 +16,8 @@ else
     # Herramientas de reconocimiento web (OSINT + activa)
     echo "[*] Instalando herramientas de reconocimiento web..."
     sudo apt install -y whois dnsutils whatweb wafw00f sslscan nikto \
-        gobuster wpscan exploitdb dirb wordlists || true
+        gobuster wpscan exploitdb dirb wordlists \
+        tor torsocks proxychains4 macchanger || true
 fi
 
 echo "[*] Creando entorno virtual e instalando librerías Python..."

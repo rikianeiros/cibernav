@@ -307,26 +307,18 @@ def test_recon_domain_validation():
 
 
 def test_recon_crtsh_parsing():
-    from modules import recon
-    import io as _io
-
-    class FakeResp:
-        def __init__(self, data): self._d = data
-        def read(self, n=None): return self._d
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
-
+    from modules import recon, tor
     payload = json.dumps([
         {"name_value": "faroladigital.es\n*.faroladigital.es"},
         {"name_value": "blog.faroladigital.es"},
         {"name_value": "www.faroladigital.es"},
-    ]).encode()
-    orig = recon.urllib.request.urlopen
-    recon.urllib.request.urlopen = lambda req, timeout=0: FakeResp(payload)
+    ])
+    orig = tor.http_get
+    tor.http_get = lambda url, timeout=0: payload
     try:
         r = recon.subdomains_crtsh("faroladigital.es")
     finally:
-        recon.urllib.request.urlopen = orig
+        tor.http_get = orig
     assert "blog.faroladigital.es" in r["subdominios"]
     assert "www.faroladigital.es" in r["subdominios"]
     # sin duplicados y ordenado
@@ -345,6 +337,31 @@ def test_recon_graceful_without_tools():
         assert gb["disponible"] is False
     finally:
         recon.shutil.which = orig
+
+
+def test_tor():
+    from modules import tor
+    # con Tor desactivado, torify_cmd no cambia el comando
+    tor.state.enabled = False
+    assert tor.torify_cmd(["nmap", "-sT", "x"]) == ["nmap", "-sT", "x"]
+    # http_get sin Tor usa urllib y funciona con file://
+    feed = os.path.join(_tmp, "tor_feed.json")
+    with open(feed, "w") as f:
+        f.write('{"ok": true}')
+    assert '"ok"' in tor.http_get("file://" + feed, 5)
+    # status devuelve las claves esperadas
+    s = tor.status()
+    assert set(["enabled", "socks_ok", "torify", "socks"]).issubset(s.keys())
+    # con Tor activo y torsocks presente, antepone el prefijo
+    import shutil as _sh
+    orig = tor.shutil.which
+    tor.shutil.which = lambda t: "/usr/bin/torsocks" if t == "torsocks" else None
+    tor.state.enabled = True
+    try:
+        assert tor.torify_cmd(["nmap", "-sT", "x"])[0] == "torsocks"
+    finally:
+        tor.shutil.which = orig
+        tor.state.enabled = False
 
 
 def _run_all():

@@ -29,6 +29,10 @@ Construida sobre FastAPI, con actualizaciones en tiempo real por WebSocket. Est�
 - **Fase activa** (interroga al servidor, requiere autorización): nmap NSE http, nikto, gobuster (directorios), wpscan (WordPress) y cruce con Exploit-DB (searchsploit).
 - El dominio se valida con regex estricta y los comandos se ejecutan sin shell (a prueba de inyección de comandos). La fase activa respeta el **modo pasivo** global.
 
+### Salida por Tor (anonimato)
+- Interruptor que enruta el **tráfico saliente por Tor** (SOCKS5 en `127.0.0.1:9050`): las peticiones HTTP de la app (crt.sh, feed de CVEs), el recon web (torsocks/proxychains) y nmap en modo connect (`-sT`). Muestra la **IP de salida** y verifica que realmente sale por Tor.
+- No se anonimiza (y la interfaz lo indica): la parte **Wi-Fi** (es radio; para eso se cambia la MAC), el escaneo de la **red local**/NMEA y las consultas **DNS por UDP**.
+
 ### Modo pasivo
 - Interruptor que **bloquea todas las acciones ofensivas** (ataques, crackeo y recon activo) dejando solo el análisis pasivo, para auditorías donde no está autorizado emitir tráfico contra la red. Se puede fijar por defecto con `CIBERNAV_PASSIVE=1`.
 

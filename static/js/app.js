@@ -141,7 +141,14 @@ const app = (() => {
   const act = async (fn) => { try { return await fn(); } catch (e) { alert(e.message); } };
 
   return {
-    init() { loadCapabilities(); connectWS(); this.loadScans(); this.loadCaptures(); this.loadCveInfo(); setInterval(loadCapabilities, 15000); },
+    init() { loadCapabilities(); connectWS(); this.loadScans(); this.loadCaptures(); this.loadCveInfo(); this.loadTor(); setInterval(loadCapabilities, 15000); },
+    async loadTor() {
+      try { renderTor(await api("/api/tor")); } catch (e) {}
+    },
+    setTor(on) {
+      const el = $("tor-status"); el.className = "ws-status off"; el.textContent = on ? "◐ conectando…" : "";
+      act(async () => renderTor(await api(`/api/tor?enabled=${on}`, "POST")));
+    },
     async loadCveInfo() {
       try {
         const i = await api("/api/vulns");
@@ -257,6 +264,20 @@ const app = (() => {
       await act(async () => { const r = await api(`/api/naval/nmea/auto?${qs({ ip })}`, "POST"); renderNmea(r.resultados); });
     },
   };
+
+  function renderTor(s) {
+    const chk = document.getElementById("tor-chk");
+    const el = document.getElementById("tor-status");
+    if (chk) chk.checked = !!s.enabled;
+    if (!el) return;
+    if (!s.enabled) { el.className = "ws-status off"; el.textContent = ""; return; }
+    if (!s.socks_ok) { el.className = "ws-status off"; el.textContent = "⚠ Tor sin conexión (9050)"; return; }
+    const ip = s.exit && s.exit.ip;
+    if (ip && s.exit.is_tor) { el.className = "ws-status on"; el.textContent = `🧅 Tor · ${ip}`; }
+    else if (ip) { el.className = "ws-status off"; el.textContent = `⚠ salida sin Tor · ${ip}`; }
+    else if (s.exit && s.exit.error) { el.className = "ws-status off"; el.textContent = "⚠ Tor: no verificado"; }
+    else { el.className = "ws-status on"; el.textContent = "🧅 Tor activo"; }
+  }
 
   function reconBlock(nombre, r) {
     if (!r) return "";

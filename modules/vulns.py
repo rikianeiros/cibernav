@@ -106,10 +106,9 @@ def update_from_url(url: str = "", timeout: int = 15, merge: bool = True) -> dic
     if not url:
         return {"error": "No se ha indicado ninguna URL de feed (ni CIBERNAV_CVE_FEED)."}
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "CIBERNAV"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            datos = resp.read(2_000_000)  # tope de 2 MB
-        nuevas = _valida(json.loads(datos.decode("utf-8", errors="ignore")))
+        from modules import tor
+        datos = tor.http_get(url, timeout)[:2_000_000]  # sale por Tor si está activo
+        nuevas = _valida(json.loads(datos))
     except Exception as e:
         return {"error": f"No se pudo actualizar desde {url}: {e}"}
 
