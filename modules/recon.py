@@ -55,6 +55,11 @@ def whois_lookup(domain: str) -> dict:
 
 def dns_records(domain: str) -> dict:
     """Registros DNS con dig; si no está, resuelve la A por socket."""
+    # Con Tor activo NO consultamos DNS: dig usa UDP (Tor no lo transporta) y
+    # hacerlo directo filtraría tu IP real. Se omite y se avisa.
+    if tor.state.enabled:
+        return {"herramienta": "dig", "disponible": True, "registros": {},
+                "resumen": "omitido con Tor (el DNS por UDP no se puede anonimizar)"}
     if shutil.which("dig"):
         out = {}
         for tipo in ("A", "AAAA", "MX", "NS", "TXT"):
@@ -125,8 +130,10 @@ def recon_pasivo(domain: str) -> dict:
 # ---------------- FASE ACTIVA ----------------
 
 def nmap_web(domain: str) -> dict:
-    # Con Tor solo funciona el connect scan (-sT); sin Tor dejamos que nmap elija.
-    modo = ["-sT"] if tor.state.enabled else []
+    # Con Tor: connect scan (-sT), sin ping raw (-Pn) y --system-dns para que la
+    # resolución use la libc (y así torsocks la enrute por Tor, en vez del
+    # resolver propio de nmap por UDP, que se escaparía).
+    modo = ["-sT", "-Pn", "--system-dns"] if tor.state.enabled else []
     r = _run(["nmap", *modo, "-sV", "-p", "80,443,8080,8443",
               "--script", "http-enum,http-headers,http-title", domain], 150)
     r["resumen"] = f"{len(re.findall(r'/[a-z]', r['salida'] or ''))} rutas/cabeceras" if r["salida"] else "sin datos"
