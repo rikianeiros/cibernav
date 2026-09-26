@@ -33,7 +33,7 @@ from modules.alert_engine import alert_engine
 from modules.attacker import attack_manager
 from modules.nmap_scanner import nmap_scanner
 from modules.bettercap import bettercap_client
-from modules import nmea, system_check, report, vulns
+from modules import nmea, system_check, report, vulns, recon
 from modules.cracker import crack_manager
 from modules.database import init_db, db_manager
 
@@ -341,6 +341,38 @@ async def crack_hashcat(capture: str, wordlist: str = None, username: str = Depe
 @app.post("/api/crack/stop/{job_id}")
 async def crack_stop(job_id: str, username: str = Depends(verify_credentials)):
     return {"status": "stopped" if crack_manager.stop(job_id) else "not_found"}
+
+
+# --- Reconocimiento web (OSINT + activa) ---
+@app.get("/api/recon/tools")
+async def recon_tools(username: str = Depends(verify_credentials)):
+    return {"tools": recon.herramientas_disponibles()}
+
+
+@app.post("/api/recon/passive")
+async def recon_passive(domain: str, username: str = Depends(verify_credentials)):
+    if not recon.valid_domain(domain):
+        raise HTTPException(status_code=400, detail="Dominio no válido")
+    alert_engine.add_alert("INFO", f"Recon pasivo sobre {domain}", "recon")
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: recon.recon_pasivo(domain))
+
+
+@app.post("/api/recon/active")
+async def recon_active(domain: str, wpscan: bool = True, username: str = Depends(verify_credentials)):
+    ensure_active()  # bloqueado en modo pasivo
+    if not recon.valid_domain(domain):
+        raise HTTPException(status_code=400, detail="Dominio no válido")
+    alert_engine.add_alert("WARNING", f"Recon ACTIVO sobre {domain}", "recon")
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: recon.recon_activo(domain, con_wpscan=wpscan))
+
+
+@app.post("/api/recon/searchsploit")
+async def recon_searchsploit(termino: str, username: str = Depends(verify_credentials)):
+    ensure_active()
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: recon.searchsploit(termino))
 
 
 # --- Base de CVEs (actualizable) ---

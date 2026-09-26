@@ -9,10 +9,14 @@ if ! command -v apt &> /dev/null; then
 else
     echo "[*] Instalando dependencias del sistema (requiere sudo)..."
     sudo apt update -qq
-    # Herramientas de auditoría (opcionales pero recomendadas) + libs de WeasyPrint
-    sudo apt install -y nmap aircrack-ng hcxdumptool bettercap \
+    # Herramientas de auditoría Wi-Fi/red + libs de WeasyPrint
+    sudo apt install -y nmap aircrack-ng hcxdumptool bettercap reaver \
         python3-venv python3-dev python3-cffi libcairo2 libpango-1.0-0 \
         libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev || true
+    # Herramientas de reconocimiento web (OSINT + activa)
+    echo "[*] Instalando herramientas de reconocimiento web..."
+    sudo apt install -y whois dnsutils whatweb wafw00f sslscan nikto \
+        gobuster wpscan exploitdb dirb wordlists || true
 fi
 
 echo "[*] Creando entorno virtual e instalando librerías Python..."

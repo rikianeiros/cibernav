@@ -296,6 +296,57 @@ def test_wash_parser():
     assert scanner.parse_wash_output("sin nada aquí") == set()
 
 
+def test_recon_domain_validation():
+    from modules import recon
+    assert recon.valid_domain("faroladigital.es")
+    assert recon.valid_domain("blog.faroladigital.es")
+    assert not recon.valid_domain("http://faroladigital.es")   # con esquema, no
+    assert not recon.valid_domain("faroladigital.es; rm -rf /")  # inyección, no
+    assert not recon.valid_domain("localhost")
+    assert not recon.valid_domain("")
+
+
+def test_recon_crtsh_parsing():
+    from modules import recon
+    import io as _io
+
+    class FakeResp:
+        def __init__(self, data): self._d = data
+        def read(self, n=None): return self._d
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    payload = json.dumps([
+        {"name_value": "faroladigital.es\n*.faroladigital.es"},
+        {"name_value": "blog.faroladigital.es"},
+        {"name_value": "www.faroladigital.es"},
+    ]).encode()
+    orig = recon.urllib.request.urlopen
+    recon.urllib.request.urlopen = lambda req, timeout=0: FakeResp(payload)
+    try:
+        r = recon.subdomains_crtsh("faroladigital.es")
+    finally:
+        recon.urllib.request.urlopen = orig
+    assert "blog.faroladigital.es" in r["subdominios"]
+    assert "www.faroladigital.es" in r["subdominios"]
+    # sin duplicados y ordenado
+    assert len(r["subdominios"]) == len(set(r["subdominios"]))
+
+
+def test_recon_graceful_without_tools():
+    from modules import recon
+    import shutil as _sh
+    orig = recon.shutil.which
+    recon.shutil.which = lambda t: None  # ninguna herramienta instalada
+    try:
+        r = recon._run(["whatweb", "https://x"], 5)
+        assert r["disponible"] is False and "no está instalado" in r["error"]
+        gb = recon.gobuster("faroladigital.es")
+        assert gb["disponible"] is False
+    finally:
+        recon.shutil.which = orig
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     passed = 0

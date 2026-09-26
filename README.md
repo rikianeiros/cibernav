@@ -24,8 +24,13 @@ Construida sobre FastAPI, con actualizaciones en tiempo real por WebSocket. Est�
 - **Comparación entre escaneos (diff)**: dispositivos nuevos o desaparecidos y puertos que se han abierto o cerrado desde la última auditoría.
 - **Informe ejecutivo** en PDF (o HTML si WeasyPrint no está disponible), presentable para un cliente.
 
+### Reconocimiento web (OSINT + activa)
+- **Fase pasiva** (no toca el objetivo): whois, registros DNS, subdominios vía Certificate Transparency (crt.sh), tecnologías (whatweb), detección de WAF (wafw00f) y análisis TLS/SSL (sslscan).
+- **Fase activa** (interroga al servidor, requiere autorización): nmap NSE http, nikto, gobuster (directorios), wpscan (WordPress) y cruce con Exploit-DB (searchsploit).
+- El dominio se valida con regex estricta y los comandos se ejecutan sin shell (a prueba de inyección de comandos). La fase activa respeta el **modo pasivo** global.
+
 ### Modo pasivo
-- Interruptor que **bloquea todas las acciones ofensivas** (ataques y crackeo) dejando solo el análisis pasivo, para auditorías donde no está autorizado emitir tráfico contra la red. Se puede fijar por defecto con `CIBERNAV_PASSIVE=1`.
+- Interruptor que **bloquea todas las acciones ofensivas** (ataques, crackeo y recon activo) dejando solo el análisis pasivo, para auditorías donde no está autorizado emitir tráfico contra la red. Se puede fijar por defecto con `CIBERNAV_PASSIVE=1`.
 
 ### Modo naval (NMEA)
 - Prueba de concepto que comprueba si los **datos de navegación** (posición GPS, rumbo, velocidad) viajan en claro por la red, sin cifrado ni autenticación.

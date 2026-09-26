@@ -158,6 +158,24 @@ const app = (() => {
       });
     },
     reloadCves() { act(async () => { await api("/api/vulns/reload", "POST"); this.loadCveInfo(); }); },
+    reconPasivo() {
+      const d = $("recon-domain").value.trim(); if (!d) return;
+      $("recon-result").innerHTML = `<p class="hint">Recon pasivo sobre ${d}…</p>`;
+      act(async () => renderRecon(await api(`/api/recon/passive?${qs({ domain: d })}`, "POST"), "pasiva"));
+    },
+    reconActivo() {
+      const d = $("recon-domain").value.trim(); if (!d) return;
+      if (!confirm(`Vas a lanzar un escaneo ACTIVO contra ${d}. Solo debes hacerlo sobre dominios propios o autorizados. ¿Continuar?`)) return;
+      $("recon-result").innerHTML = `<p class="hint">Recon activo sobre ${d} (puede tardar unos minutos)…</p>`;
+      act(async () => renderRecon(await api(`/api/recon/active?${qs({ domain: d, wpscan: $("recon-wpscan").checked })}`, "POST"), "activa"));
+    },
+    searchsploit() {
+      const t = $("recon-sploit").value.trim(); if (!t) return;
+      act(async () => {
+        const r = await api(`/api/recon/searchsploit?${qs({ termino: t })}`, "POST");
+        $("recon-result").innerHTML = `<h3>searchsploit: ${t}</h3>` + reconBlock("searchsploit", r);
+      });
+    },
     async loadCaptures() {
       try {
         const r = await api("/api/captures");
@@ -239,6 +257,34 @@ const app = (() => {
       await act(async () => { const r = await api(`/api/naval/nmea/auto?${qs({ ip })}`, "POST"); renderNmea(r.resultados); });
     },
   };
+
+  function reconBlock(nombre, r) {
+    if (!r) return "";
+    if (r.disponible === false) return `<div class="finding"><div class="fh"><b>${nombre}</b><span class="badge desc">no instalado</span></div><p class="hint">${r.error || ""}</p></div>`;
+    const cuerpo = r.salida ? `<pre class="console">${(r.salida || "").replace(/</g, "&lt;")}</pre>` : "";
+    return `<div class="finding"><div class="fh"><b>${nombre}</b><span class="badge bajo">${r.resumen || "ok"}</span></div>
+      ${r.error ? `<p class="err">${r.error}</p>` : ""}${cuerpo}</div>`;
+  }
+
+  function renderRecon(data, fase) {
+    const box = $("recon-result");
+    let html = `<h3>Recon ${fase} · ${data.dominio}</h3>`;
+    if (fase === "pasiva") {
+      // subdominios en lista, DNS como tabla, resto en bloques
+      const subs = (data.subdominios && data.subdominios.subdominios) || [];
+      html += `<div class="finding r-bajo"><div class="fh"><b>Subdominios (crt.sh)</b><span class="badge bajo">${subs.length}</span></div>
+        <p class="mono" style="line-height:1.8">${subs.map((s) => s).join("&nbsp;·&nbsp;") || "—"}</p></div>`;
+      const dns = (data.dns && data.dns.registros) || {};
+      html += `<div class="finding"><div class="fh"><b>DNS</b><span class="badge bajo">${data.dns ? data.dns.resumen : ""}</span></div>`
+        + Object.entries(dns).map(([k, v]) => `<p><b>${k}</b>: <span class="mono">${v.join(", ")}</span></p>`).join("") + `</div>`;
+      html += reconBlock("whois", data.whois) + reconBlock("whatweb", data.whatweb)
+        + reconBlock("WAF (wafw00f)", data.waf) + reconBlock("SSL (sslscan)", data.ssl);
+    } else {
+      html += reconBlock("nmap web (NSE)", data.nmap_web) + reconBlock("nikto", data.nikto)
+        + reconBlock("gobuster", data.gobuster) + (data.wpscan ? reconBlock("wpscan", data.wpscan) : "");
+    }
+    box.innerHTML = html;
+  }
 
   function renderDiff(d) {
     const box = $("diff-result");

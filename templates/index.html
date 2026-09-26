@@ -25,6 +25,7 @@
     <button class="tab" data-tab="nmap">Puertos (nmap)</button>
     <button class="tab" data-tab="crackeo">Crackeo</button>
     <button class="tab" data-tab="inventario">Inventario e informes</button>
+    <button class="tab" data-tab="recon">Recon web</button>
     <button class="tab" data-tab="naval">Modo naval (NMEA)</button>
 </nav>
 
@@ -119,6 +120,22 @@
             <button onclick="app.diff()">Comparar</button>
         </div>
         <div id="diff-result"></div>
+    </section>
+
+    <!-- RECON WEB -->
+    <section id="recon" class="panel">
+        <p class="hint">Reconocimiento de un dominio. La fase pasiva usa fuentes públicas (no toca el servidor); la activa sí lo interroga — úsala solo sobre dominios propios o autorizados. La fase activa se bloquea en modo pasivo.</p>
+        <div class="row">
+            <input id="recon-domain" placeholder="dominio (p. ej. faroladigital.es)">
+            <label class="chk"><input type="checkbox" id="recon-wpscan" checked> WordPress (wpscan)</label>
+            <button onclick="app.reconPasivo()">Fase pasiva (OSINT)</button>
+            <button class="ghost" onclick="app.reconActivo()">Fase activa</button>
+        </div>
+        <div class="row">
+            <input id="recon-sploit" placeholder="buscar en Exploit-DB (p. ej. 'apache 2.4.49')">
+            <button class="ghost" onclick="app.searchsploit()">searchsploit</button>
+        </div>
+        <div id="recon-result"></div>
     </section>
 
     <!-- NAVAL -->
