@@ -34,6 +34,7 @@ from modules.attacker import attack_manager
 from modules.nmap_scanner import nmap_scanner
 from modules.bettercap import bettercap_client
 from modules import nmea, system_check, report
+from modules.cracker import crack_manager
 from modules.database import init_db, db_manager
 
 logging.basicConfig(level=logging.INFO)
@@ -249,6 +250,40 @@ async def inventory_scan(target: str, objetivo: str, with_os: bool = False, user
 @app.get("/api/scans")
 async def list_scans(username: str = Depends(verify_credentials)):
     return {"scans": db_manager.listar_escaneos()}
+
+
+# --- Crackeo de handshakes ---
+async def crack_ws_callback(job_id: str, line: str, finished: bool = False, key: str = None):
+    msg = {"type": "crack_finished" if finished else "crack_output", "id": job_id, "line": line}
+    if finished:
+        msg["key"] = key
+    await manager.broadcast(msg)
+
+
+@app.get("/api/captures")
+async def list_captures(username: str = Depends(verify_credentials)):
+    return {"captures": crack_manager.list_captures(), "wordlist_ok": crack_manager.wordlist_ok()}
+
+
+@app.post("/api/crack/aircrack")
+async def crack_aircrack(capture: str, bssid: str = None, wordlist: str = None, username: str = Depends(verify_credentials)):
+    res = await crack_manager.crack_aircrack(capture, bssid, wordlist, crack_ws_callback)
+    if "error" not in res:
+        alert_engine.add_alert("WARNING", f"Crackeo (aircrack) iniciado sobre {os.path.basename(capture)}", "cracker")
+    return res
+
+
+@app.post("/api/crack/hashcat")
+async def crack_hashcat(capture: str, wordlist: str = None, username: str = Depends(verify_credentials)):
+    res = await crack_manager.crack_hashcat(capture, wordlist, crack_ws_callback)
+    if "error" not in res:
+        alert_engine.add_alert("WARNING", f"Crackeo (hashcat) iniciado sobre {os.path.basename(capture)}", "cracker")
+    return res
+
+
+@app.post("/api/crack/stop/{job_id}")
+async def crack_stop(job_id: str, username: str = Depends(verify_credentials)):
+    return {"status": "stopped" if crack_manager.stop(job_id) else "not_found"}
 
 
 # --- Modo naval: NMEA ---

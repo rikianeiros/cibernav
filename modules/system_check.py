@@ -68,4 +68,12 @@ def get_capabilities() -> dict:
     if not caps["report"]["available"]:
         warnings.append("WeasyPrint no disponible: los informes se mostrarán en HTML en lugar de PDF.")
 
+    # Diccionario para el crackeo
+    import os as _os
+    from config import DEFAULT_WORDLIST
+    wl_ok = _os.path.isfile(DEFAULT_WORDLIST)
+    caps["wordlist"] = {"available": wl_ok, "path": DEFAULT_WORDLIST, "missing_tools": [] if wl_ok else [DEFAULT_WORDLIST]}
+    if caps["cracking"]["available"] and not wl_ok:
+        warnings.append(f"No se encuentra el diccionario ({DEFAULT_WORDLIST}). En Kali suele venir comprimido: gunzip /usr/share/wordlists/rockyou.txt.gz")
+
     return {"capabilities": caps, "warnings": warnings}

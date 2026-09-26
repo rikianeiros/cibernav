@@ -18,6 +18,7 @@
     <button class="tab active" data-tab="panel">Panel</button>
     <button class="tab" data-tab="wifi">Wi-Fi</button>
     <button class="tab" data-tab="nmap">Puertos (nmap)</button>
+    <button class="tab" data-tab="crackeo">Crackeo</button>
     <button class="tab" data-tab="inventario">Inventario e informes</button>
     <button class="tab" data-tab="naval">Modo naval (NMEA)</button>
 </nav>
@@ -65,6 +66,21 @@
             <button onclick="app.scanPorts()">Escanear puertos</button>
         </div>
         <div id="nmap-results"></div>
+    </section>
+
+    <!-- CRACKEO -->
+    <section id="crackeo" class="panel">
+        <p class="hint">Ataque de diccionario sobre una captura ya obtenida (handshake WPA/WPA2 o PMKID). Solo sobre redes propias o autorizadas.</p>
+        <div class="row">
+            <input id="wordlist" placeholder="Diccionario (por defecto: rockyou)" >
+            <button class="ghost" onclick="app.loadCaptures()">↻ Actualizar capturas</button>
+        </div>
+        <table class="data"><thead><tr>
+            <th>Captura</th><th>Tipo</th><th>Tamaño</th><th>BSSID (opcional)</th><th>Acción</th>
+        </tr></thead><tbody id="capture-rows"></tbody></table>
+        <div id="crack-key"></div>
+        <h3>Salida del crackeo</h3>
+        <pre id="crack-out" class="console"></pre>
     </section>
 
     <!-- INVENTARIO -->

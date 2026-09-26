@@ -133,6 +133,60 @@ def test_attacker_with_fake_subprocess():
     assert attacker.attack_manager.stop_attack("inexistente") is False
 
 
+def test_cracker():
+    import shutil as _sh
+    from modules import cracker
+
+    # Captura y diccionario de prueba
+    cap = os.path.join(_tmp, "handshake-01.cap")
+    open(cap, "w").write("fake")
+    wl = os.path.join(_tmp, "words.txt")
+    open(wl, "w").write("1234\npassword123\n")
+
+    # list_captures encuentra la captura
+    caps = cracker.crack_manager.list_captures()
+    assert any(c["nombre"] == "handshake-01.cap" for c in caps)
+
+    # subprocess simulado que "encuentra" la clave
+    class FakeProc:
+        def __init__(self, *a, **k):
+            self.stdout = self
+            self._lines = ["Reading packets...\n", "KEY FOUND! [ password123 ]\n"]
+
+        def readline(self):
+            return self._lines.pop(0) if self._lines else ""
+
+        def wait(self, timeout=None):
+            return 0
+
+    cracker.subprocess = types.SimpleNamespace(
+        Popen=lambda *a, **k: FakeProc(),
+        run=lambda *a, **k: types.SimpleNamespace(returncode=0, stdout="", stderr=""),
+        STDOUT=-2, PIPE=-1,
+    )
+    cracker.shutil = types.SimpleNamespace(which=lambda t: "/usr/bin/" + t)  # fingir tools presentes
+
+    got = {}
+
+    async def cb(job_id, line, finished=False, key=None):
+        if finished:
+            got["key"] = key
+
+    async def run():
+        r = await cracker.crack_manager.crack_aircrack(cap, "AA:BB:CC:DD:EE:01", wl, cb)
+        await asyncio.sleep(0.2)
+        return r
+
+    res = asyncio.run(run())
+    assert "job_id" in res
+    assert got.get("key") == "password123"
+
+    # errores controlados
+    err = asyncio.run(cracker.crack_manager.crack_aircrack("/no/existe.cap", None, wl, cb))
+    assert "error" in err
+    assert cracker.crack_manager.stop("inexistente") is False
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     passed = 0

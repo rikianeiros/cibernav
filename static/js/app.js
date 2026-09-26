@@ -74,6 +74,17 @@ const app = (() => {
       $("attack-out").textContent += `[${msg.id.slice(0, 6)}] — finalizado —\n`;
     } else if (msg.type === "nmap_finished") {
       renderNmap(msg.target, msg.results);
+    } else if (msg.type === "crack_output") {
+      $("crack-out").textContent += msg.line + "\n";
+      $("crack-out").scrollTop = $("crack-out").scrollHeight;
+    } else if (msg.type === "crack_finished") {
+      $("crack-out").textContent += msg.line + "\n";
+      if (msg.key) {
+        $("crack-key").innerHTML = `<div class="finding r-crit"><div class="fh"><b>🔑 Clave encontrada</b>
+          <span class="badge crit">CRÍTICO</span></div><p class="mono" style="font-size:16px">${msg.key}</p></div>`;
+      } else {
+        $("crack-key").innerHTML = `<div class="finding r-bajo"><p>La clave no estaba en el diccionario.</p></div>`;
+      }
     }
   }
 
@@ -121,7 +132,37 @@ const app = (() => {
   const act = async (fn) => { try { return await fn(); } catch (e) { alert(e.message); } };
 
   return {
-    init() { loadCapabilities(); connectWS(); this.loadScans(); setInterval(loadCapabilities, 15000); },
+    init() { loadCapabilities(); connectWS(); this.loadScans(); this.loadCaptures(); setInterval(loadCapabilities, 15000); },
+    async loadCaptures() {
+      try {
+        const r = await api("/api/captures");
+        const fmt = (b) => b > 1024 ? (b / 1024).toFixed(0) + " KB" : b + " B";
+        $("capture-rows").innerHTML = (r.captures || []).map((c) => {
+          const engine = c.tipo === "pmkid" ? "hashcat" : "aircrack";
+          return `<tr>
+            <td class="mono">${c.nombre}</td><td>${c.tipo}</td><td>${fmt(c.tamano)}</td>
+            <td><input class="bssid-in" data-cap="${c.ruta}" placeholder="AA:BB:.." style="min-width:120px"></td>
+            <td><button class="mini" onclick="app.crack('${c.ruta.replace(/'/g, "")}','${engine}')">crackear</button></td>
+          </tr>`;
+        }).join("") || `<tr><td colspan="5" class="hint">No hay capturas todavía. Captura un handshake o PMKID en la pestaña Wi-Fi.</td></tr>`;
+        if (!r.wordlist_ok) $("wordlist").placeholder = "⚠ diccionario por defecto no encontrado — indica una ruta";
+      } catch (e) {}
+    },
+    crack(ruta, engine) {
+      const wl = $("wordlist").value.trim();
+      const bssidInput = document.querySelector(`.bssid-in[data-cap="${ruta}"]`);
+      const bssid = bssidInput ? bssidInput.value.trim() : "";
+      $("crack-out").textContent = ""; $("crack-key").innerHTML = "";
+      const params = { capture: ruta };
+      if (wl) params.wordlist = wl;
+      const path = engine === "hashcat" ? "/api/crack/hashcat" : "/api/crack/aircrack";
+      if (engine === "aircrack" && bssid) params.bssid = bssid;
+      act(async () => {
+        const r = await api(`${path}?${qs(params)}`, "POST");
+        if (r.error) { $("crack-out").textContent = "Error: " + r.error; return; }
+        $("crack-out").textContent = `[*] ${r.motor} en marcha con ${r.wordlist}\n`;
+      });
+    },
     startMonitor() { const i = $("iface").value; if (!i) return alert("No hay interfaz inalámbrica."); act(() => api(`/api/monitor/start?interface=${i}`, "POST")); },
     stopMonitor() { act(() => api("/api/monitor/stop", "POST")); },
     startScan() { act(() => api("/api/scan/start", "POST")); },

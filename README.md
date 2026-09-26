@@ -11,6 +11,7 @@ Construida sobre FastAPI, con actualizaciones en tiempo real por WebSocket. Est�
 - Detección de redes **abiertas**, con **WPS** activo y su tipo de cifrado (OPN/WEP/WPA/WPA2/WPA3), con el riesgo explicado.
 - Identificación de fabricante por **MAC (OUI)**: señala ESP32, cámaras IP, routers con credenciales por defecto, etc.
 - Ataques de auditoría: **deauth**, captura de **handshake WPA/WPA2** y **PMKID** (hcxdumptool), con salida en vivo.
+- **Crackeo por diccionario** de las capturas obtenidas: aircrack-ng (handshakes) y hashcat (PMKID), con recuperación de la clave si está en la lista.
 
 ### Análisis de host
 - Escaneo de puertos con **nmap** (perfiles rápido / estándar / completo).
