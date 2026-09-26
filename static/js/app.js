@@ -301,8 +301,14 @@ const app = (() => {
       html += reconBlock("whois", data.whois) + reconBlock("whatweb", data.whatweb)
         + reconBlock("WAF (wafw00f)", data.waf) + reconBlock("SSL (sslscan)", data.ssl);
     } else {
+      const bf = data.subdominios_bruteforce;
+      if (bf) {
+        const subs = bf.subdominios || [];
+        html += `<div class="finding r-bajo"><div class="fh"><b>Subdominios (fuerza bruta)</b><span class="badge bajo">${bf.resumen || bf.error || ""}</span></div>`
+          + (subs.length ? `<p class="mono" style="line-height:1.8">${subs.join("&nbsp;·&nbsp;")}</p>` : `<p class="hint">${bf.error || "sin resultados"}</p>`) + `</div>`;
+      }
       html += reconBlock("nmap web (NSE)", data.nmap_web) + reconBlock("nikto", data.nikto)
-        + reconBlock("gobuster", data.gobuster) + (data.wpscan ? reconBlock("wpscan", data.wpscan) : "");
+        + reconBlock("gobuster (directorios)", data.gobuster) + (data.wpscan ? reconBlock("wpscan", data.wpscan) : "");
     }
     box.innerHTML = html;
   }

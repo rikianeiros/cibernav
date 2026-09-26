@@ -27,12 +27,16 @@ def valid_domain(d: str) -> bool:
     return bool(DOMAIN_RE.match((d or "").strip()))
 
 
-def _run(cmd: list[str], timeout: int = 60) -> dict:
-    """Ejecuta una herramienta si existe; devuelve salida acotada y estado."""
+def _run(cmd: list[str], timeout: int = 60, torify: bool = True) -> dict:
+    """
+    Ejecuta una herramienta si existe; devuelve salida acotada y estado.
+    `torify=False` para binarios en Go (gobuster), que se saltan torsocks/
+    proxychains y deben anonimizarse con su propio flag --proxy.
+    """
     tool = cmd[0]
     if not shutil.which(tool):
         return {"herramienta": tool, "disponible": False, "salida": "", "error": f"{tool} no está instalado"}
-    run_cmd = tor.torify_cmd(cmd)  # antepone torsocks/proxychains si Tor está activo
+    run_cmd = tor.torify_cmd(cmd) if torify else cmd
     try:
         p = subprocess.run(run_cmd, capture_output=True, text=True, timeout=timeout)
         salida = (p.stdout + ("\n" + p.stderr if p.stderr else ""))[-8000:]
@@ -147,12 +151,38 @@ def nikto(domain: str) -> dict:
 
 
 def gobuster(domain: str, wordlist: str = "/usr/share/wordlists/dirb/common.txt") -> dict:
+    """Descubre directorios/ficheros ocultos. gobuster es Go: bajo Tor usa su
+    proxy nativo --proxy socks5://… (torsocks no le afecta)."""
     if not shutil.which("gobuster"):
         return {"herramienta": "gobuster", "disponible": False, "salida": "", "error": "gobuster no está instalado"}
     if not _existe(wordlist):
         return {"herramienta": "gobuster", "disponible": True, "salida": "", "error": f"diccionario no encontrado: {wordlist}"}
-    r = _run(["gobuster", "dir", "-q", "-u", f"https://{domain}", "-w", wordlist, "-t", "20"], 150)
+    cmd = ["gobuster", "dir", "-q", "-u", f"https://{domain}", "-w", wordlist, "-t", "20"]
+    if tor.state.enabled:
+        cmd += ["--proxy", f"socks5://{tor.SOCKS_HOST}:{tor.SOCKS_PORT}"]
+    r = _run(cmd, 150, torify=False)
     r["resumen"] = f"{len([l for l in (r['salida'] or '').splitlines() if l.strip()])} rutas encontradas"
+    return r
+
+
+def gobuster_dns(domain: str, wordlist: str = "/usr/share/wordlists/dnsmap.txt") -> dict:
+    """
+    Fuerza bruta de subdominios (complemento activo a crt.sh). gobuster dns
+    resuelve por DNS directo: bajo Tor NO se puede anonimizar sin un DNSPort de
+    Tor, así que se omite y se recomienda crt.sh (que sí sale por Tor).
+    """
+    if not shutil.which("gobuster"):
+        return {"herramienta": "gobuster dns", "disponible": False, "salida": "", "error": "gobuster no está instalado"}
+    if tor.state.enabled:
+        return {"herramienta": "gobuster dns", "disponible": True, "salida": "",
+                "error": "omitido con Tor (la fuerza bruta DNS no se anonimiza; usa crt.sh)"}
+    wl = wordlist if _existe(wordlist) else "/usr/share/wordlists/dirb/common.txt"
+    if not _existe(wl):
+        return {"herramienta": "gobuster dns", "disponible": True, "salida": "", "error": f"diccionario no encontrado: {wordlist}"}
+    r = _run(["gobuster", "dns", "-q", "-d", domain, "-w", wl, "-t", "20"], 150, torify=False)
+    subs = [l.replace("Found:", "").strip() for l in (r["salida"] or "").splitlines() if l.strip()]
+    r["subdominios"] = subs
+    r["resumen"] = f"{len(subs)} subdominios por fuerza bruta"
     return r
 
 
@@ -173,6 +203,7 @@ def searchsploit(termino: str) -> dict:
 def recon_activo(domain: str, wordlist: str = "/usr/share/wordlists/dirb/common.txt", con_wpscan: bool = True) -> dict:
     res = {
         "dominio": domain,
+        "subdominios_bruteforce": gobuster_dns(domain),
         "nmap_web": nmap_web(domain),
         "nikto": nikto(domain),
         "gobuster": gobuster(domain, wordlist),

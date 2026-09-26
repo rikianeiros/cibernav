@@ -339,6 +339,34 @@ def test_recon_graceful_without_tools():
         recon.shutil.which = orig
 
 
+def test_gobuster_dns_modes():
+    from modules import recon, tor
+    # no instalado -> no disponible
+    orig = recon.shutil.which
+    recon.shutil.which = lambda t: None
+    try:
+        assert recon.gobuster_dns("faroladigital.es")["disponible"] is False
+    finally:
+        recon.shutil.which = orig
+    # instalado pero con Tor activo -> se omite con aviso (no fuerza bruta DNS por Tor)
+    recon.shutil.which = lambda t: "/usr/bin/gobuster"
+    tor.state.enabled = True
+    try:
+        r = recon.gobuster_dns("faroladigital.es")
+        assert r["disponible"] is True and "omitido" in r["error"]
+        # gobuster dir con Tor añade su proxy nativo (no torsocks)
+        cap = {}
+        recon.subprocess_run_orig = recon.subprocess.run
+        recon.subprocess.run = lambda cmd, **k: cap.setdefault("cmd", cmd) or type("P", (), {"stdout": "", "stderr": "", "returncode": 0})()
+        recon._existe = lambda p: True
+        recon.gobuster("faroladigital.es")
+        assert "--proxy" in cap["cmd"] and "torsocks" not in cap["cmd"][0]
+    finally:
+        recon.subprocess.run = recon.subprocess_run_orig
+        tor.state.enabled = False
+        recon.shutil.which = orig
+
+
 def test_tor():
     from modules import tor
     # con Tor desactivado, torify_cmd no cambia el comando
