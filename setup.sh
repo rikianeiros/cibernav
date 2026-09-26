@@ -1,42 +1,27 @@
 #!/bin/bash
-set -e  # Salir inmediatamente si cualquier comando falla
-
+set -e
 echo "============================================="
-echo " CIBERNAV - Instalación del Entorno"
+echo " CIBERNAV — Instalación del entorno"
 echo "============================================="
 
-# 1. Comprobar que estamos en Kali Linux
 if ! command -v apt &> /dev/null; then
-    echo "[!] ADVERTENCIA: Este script está diseñado para Kali Linux (apt)."
+    echo "[!] Aviso: pensado para Kali/Debian (apt). En otros sistemas instala las dependencias a mano."
+else
+    echo "[*] Instalando dependencias del sistema (requiere sudo)..."
+    sudo apt update -qq
+    # Herramientas de auditoría (opcionales pero recomendadas) + libs de WeasyPrint
+    sudo apt install -y nmap aircrack-ng hcxdumptool bettercap \
+        python3-venv python3-dev python3-cffi libcairo2 libpango-1.0-0 \
+        libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev || true
 fi
 
-# 2. Instalar dependencias del sistema (nmap + librerías para WeasyPrint)
-echo "[*] Instalando dependencias del sistema con apt..."
-sudo apt update -qq
-sudo apt install -y nmap python3-cffi libcairo2 libpango-1.0-0 \
-    libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev python3-dev
-
-# 3. Crear la carpeta de base de datos si no existe
-echo "[*] Creando estructura de carpetas..."
-mkdir -p db
-
-# 4. Crear el entorno virtual de Python
-echo "[*] Creando entorno virtual nativo..."
+echo "[*] Creando entorno virtual e instalando librerías Python..."
 python3 -m venv venv
+./venv/bin/pip install --upgrade pip -q
+./venv/bin/pip install -r requirements.txt
 
-# 5. Activar e instalar librerías Python
-echo "[*] Instalando librerías Python..."
-source venv/bin/activate
-pip install --upgrade pip -q
-pip install -r requirements.txt
+[ -f .env ] || cp .env.example .env
 
 echo ""
-echo "============================================="
-echo " ¡Instalación completada con éxito!"
-echo "============================================="
-echo ""
-echo " Para arrancar CIBERNAV:"
-echo "   source venv/bin/activate"
-echo "   sudo python3 app.py"
-echo ""
-echo " Luego abre el navegador en: http://localhost:5000"
+echo "  Instalación completada. Arranca con:  ./run.sh"
+echo "  (Revisa y ajusta el archivo .env antes de exponer el panel)"

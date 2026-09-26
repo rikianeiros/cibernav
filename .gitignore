@@ -1,34 +1,39 @@
 # --- Entorno Python ---
-# El entorno virtual pesa ~500MB y es específico de cada máquina.
-# Cada máquina lo genera con setup.sh
 venv/
+env/
+.Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
+*$py.class
 
-# --- Base de datos ---
-# Contiene datos reales de escaneos e inteligencia naval.
-# NUNCA debe subirse a un repositorio.
+# --- Secretos y configuración local ---
+.env
+
+# --- Base de datos (datos reales de escaneos) ---
 db/
+*.db
 
-# --- Archivos de Captura Wi-Fi ---
-# Archivos .cap y .pcap con handshakes WPA2 capturados.
-# Son material sensible de auditoría.
+# --- Capturas e informes (material sensible de auditoría) ---
+/tmp/cibernav/
 *.cap
 *.pcap
 *.pcapng
+*.hc22000
+*.csv
+*.netxml
+*.pdf
 
 # --- Logs y temporales ---
 *.log
 *.tmp
 
-# --- Sistema Operativo ---
+# --- Sistema operativo ---
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
 
-# --- IDEs ---
+# --- Editores / IDEs ---
 .vscode/
 .idea/
 *.swp

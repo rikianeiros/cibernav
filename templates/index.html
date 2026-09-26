@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIBERNAV — Suite de auditoría de red</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">⚓ CIBERNAV<span class="tag">auditoría Wi-Fi · IoT · naval</span></div>
+    <div id="ws-status" class="ws-status off">● desconectado</div>
+</header>
+
+<div id="cap-banner" class="cap-banner hidden"></div>
+
+<nav class="tabs">
+    <button class="tab active" data-tab="panel">Panel</button>
+    <button class="tab" data-tab="wifi">Wi-Fi</button>
+    <button class="tab" data-tab="nmap">Puertos (nmap)</button>
+    <button class="tab" data-tab="inventario">Inventario e informes</button>
+    <button class="tab" data-tab="naval">Modo naval (NMEA)</button>
+</nav>
+
+<main>
+    <!-- PANEL -->
+    <section id="panel" class="panel active">
+        <div class="grid-stats">
+            <div class="stat"><div class="n" id="s-net">0</div>redes</div>
+            <div class="stat"><div class="n" id="s-cli">0</div>clientes</div>
+            <div class="stat"><div class="n warn" id="s-open">0</div>abiertas</div>
+            <div class="stat"><div class="n warn" id="s-wps">0</div>WPS</div>
+        </div>
+        <h3>Alertas recientes</h3>
+        <ul id="alerts" class="alerts"></ul>
+        <h3>Capacidades del entorno</h3>
+        <div id="caps" class="caps"></div>
+    </section>
+
+    <!-- WIFI -->
+    <section id="wifi" class="panel">
+        <div class="row">
+            <select id="iface"></select>
+            <button onclick="app.startMonitor()">Activar modo monitor</button>
+            <button class="ghost" onclick="app.stopMonitor()">Detener</button>
+            <button onclick="app.startScan()">▶ Escanear</button>
+            <button class="ghost" onclick="app.stopScan()">■ Parar escaneo</button>
+        </div>
+        <table class="data"><thead><tr>
+            <th>BSSID</th><th>ESSID</th><th>Canal</th><th>Cifrado</th><th>Señal</th><th>Acción</th>
+        </tr></thead><tbody id="net-rows"></tbody></table>
+        <h3>Salida de ataques</h3>
+        <pre id="attack-out" class="console"></pre>
+    </section>
+
+    <!-- NMAP -->
+    <section id="nmap" class="panel">
+        <div class="row">
+            <input id="nmap-ip" placeholder="IP objetivo (p. ej. 192.168.1.1)">
+            <select id="nmap-profile">
+                <option value="rápido">Rápido</option>
+                <option value="estándar">Estándar</option>
+                <option value="completo">Completo</option>
+            </select>
+            <button onclick="app.scanPorts()">Escanear puertos</button>
+        </div>
+        <div id="nmap-results"></div>
+    </section>
+
+    <!-- INVENTARIO -->
+    <section id="inventario" class="panel">
+        <div class="row">
+            <input id="inv-target" placeholder="Red/host (p. ej. 192.168.1.0/24)">
+            <input id="inv-name" placeholder="Nombre del objetivo (p. ej. Oficina, Buque Nereida)">
+            <label class="chk"><input type="checkbox" id="inv-os"> Detectar SO (sudo)</label>
+            <button onclick="app.inventoryScan()">Inventariar</button>
+        </div>
+        <p class="hint">Genera un inventario persistente y sirve de base para los informes.</p>
+        <table class="data"><thead><tr>
+            <th>#</th><th>Objetivo</th><th>Tipo</th><th>Fecha</th><th>Informe</th>
+        </tr></thead><tbody id="scan-rows"></tbody></table>
+    </section>
+
+    <!-- NAVAL -->
+    <section id="naval" class="panel">
+        <p class="hint">Prueba de concepto: comprueba si los datos de navegación (NMEA) viajan en claro por la red.</p>
+        <div class="row">
+            <input id="nmea-ip" placeholder="IP del multiplexor/instrumento NMEA">
+            <input id="nmea-port" type="number" value="10110" style="max-width:110px">
+            <button onclick="app.nmea()">Capturar</button>
+            <button class="ghost" onclick="app.nmeaAuto()">Probar puertos habituales</button>
+        </div>
+        <div id="nmea-result"></div>
+    </section>
+</main>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

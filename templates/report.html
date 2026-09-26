@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Informe de Auditoría de Seguridad — CIBERNAV</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.5; font-size: 11pt; }
+        h1, h2, h3 { color: #1a365d; }
+        .header { text-align: center; border-bottom: 2px solid #1a365d; margin-bottom: 30px; padding-bottom: 10px; }
+        .summary { background-color: #f8fafc; padding: 15px; border-left: 4px solid #2b6cb0; margin-bottom: 30px; }
+        .kpis { display: flex; gap: 12px; margin: 15px 0; }
+        .kpi { flex: 1; text-align: center; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; }
+        .kpi .n { font-size: 22pt; font-weight: bold; color: #1a365d; }
+        .device-card { border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; border-radius: 6px; }
+        .risk-crítico, .risk-crtico { color: #9b2c2c; font-weight: bold; }
+        .risk-alto, .risk-medio-alto { color: #e53e3e; font-weight: bold; }
+        .risk-medio { color: #d69e2e; font-weight: bold; }
+        .risk-bajo { color: #38a169; font-weight: bold; }
+        .risk-desconocido { color: #718096; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt; }
+        th, td { border: 1px solid #cbd5e0; padding: 8px; text-align: left; vertical-align: top; }
+        th { background-color: #edf2f7; }
+        .footer { margin-top: 40px; font-size: 9pt; color: #718096; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>INFORME DE AUDITORÍA DE SEGURIDAD DE RED</h1>
+        <p><strong>Objetivo:</strong> {{ scan.objetivo }} &nbsp;|&nbsp; <strong>Escaneo:</strong> {{ scan.tipo }} &nbsp;|&nbsp; <strong>Fecha:</strong> {{ scan.fecha }}</p>
+        <p><em>Documento generado por CIBERNAV — Uso interno / no clasificado</em></p>
+    </div>
+
+    <div class="summary">
+        <h2>Resumen ejecutivo</h2>
+        <p>Se ha realizado un análisis de red activo sobre <strong>{{ scan.objetivo }}</strong>. El objetivo de este informe es traducir los hallazgos técnicos a un lenguaje claro para la toma de decisiones, destacando las configuraciones que suponen un mayor riesgo.</p>
+        <div class="kpis">
+            <div class="kpi"><div class="n">{{ scan.total_dispositivos }}</div>Dispositivos</div>
+            <div class="kpi"><div class="n">{{ scan.total_servicios }}</div>Servicios expuestos</div>
+            <div class="kpi"><div class="n risk-{{ scan.riesgo_global|lower }}">{{ scan.riesgo_global }}</div>Riesgo global</div>
+        </div>
+    </div>
+
+    <h2>Inventario y vulnerabilidades detectadas</h2>
+    {% for host in scan.hosts %}
+    <div class="device-card">
+        <h3>Dispositivo — {{ host.ip }}</h3>
+        <p>
+            <strong>MAC:</strong> {{ host.mac }} ({{ host.fabricante or "fabricante desconocido" }})<br>
+            <strong>Sistema operativo:</strong> {{ host.os or "no detectado" }}<br>
+            <strong>Hostname:</strong> {{ host.hostname or "no publicado" }}
+        </p>
+        {% if host.servicios %}
+        <table>
+            <thead>
+                <tr><th>Servicio (puerto)</th><th>Riesgo</th><th>Implicación</th><th>Recomendación</th></tr>
+            </thead>
+            <tbody>
+                {% for s in host.servicios %}
+                <tr>
+                    <td><strong>{{ s.knowledge.servicio }}</strong><br><small>{{ s.protocolo }}/{{ s.puerto }} — {{ s.version or "" }}</small></td>
+                    <td class="risk-{{ s.knowledge.riesgo|lower }}">{{ s.knowledge.riesgo }}</td>
+                    <td>{{ s.knowledge.descripcion }}</td>
+                    <td>{{ s.knowledge.recomendacion }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p><em>Sin puertos abiertos detectados.</em></p>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No se registraron dispositivos en este escaneo.</p>
+    {% endfor %}
+
+    <div class="footer">
+        Generado el {{ generado }} · CIBERNAV — Suite de auditoría de seguridad de redes.<br>
+        Uso exclusivo para auditorías autorizadas.
+    </div>
+</body>
+</html>
