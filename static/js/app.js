@@ -86,10 +86,12 @@ const app = (() => {
 
   function renderNetworks(nets) {
     $("net-rows").innerHTML = (nets || []).map((n) => {
-      const enc = n.encryption || (n.flags && n.flags.includes("OPEN_NETWORK") ? "OPN" : "?");
+      const enc = n.privacy || (n.flags && n.flags.includes("OPEN_NETWORK") ? "OPN" : "?");
+      const flags = (n.flags || []).filter((f) => f !== "STRONG_SIGNAL")
+        .map((f) => `<span class="badge alto">${f}</span>`).join(" ");
       return `<tr>
         <td class="mono">${n.bssid || ""}</td>
-        <td>${n.essid || "&lt;oculta&gt;"}</td>
+        <td>${n.ssid || "&lt;oculta&gt;"} ${flags}</td>
         <td>${n.channel || ""}</td>
         <td>${enc}</td>
         <td>${n.power || ""}</td>

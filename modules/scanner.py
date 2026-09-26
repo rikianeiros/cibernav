@@ -37,7 +37,9 @@ def parse_airodump_csv(csv_path: str) -> tuple[dict, dict]:
     if not os.path.exists(csv_path):
         return networks, clients
 
-    with open(csv_path, "r", errors="ignore") as f:
+    # newline="" evita que Python traduzca los \r\n a \n al leer; el resto del
+    # parser divide por "\r\n", que es como escribe airodump-ng.
+    with open(csv_path, "r", errors="ignore", newline="") as f:
         content = f.read()
     
     sections = content.split("\r\n\r\n")
@@ -45,9 +47,20 @@ def parse_airodump_csv(csv_path: str) -> tuple[dict, dict]:
         return networks, clients
 
     # Parse Networks
+    # Saltamos hasta después de la fila de cabecera (empieza por "BSSID"),
+    # en lugar de asumir un número fijo de líneas: airodump no siempre incluye
+    # la línea en blanco inicial, y hacerlo por posición se comía la primera red.
     net_lines = sections[0].split("\r\n")
-    if len(net_lines) > 2:
-        reader = csv.reader(net_lines[2:])
+    data_lines = []
+    seen_header = False
+    for ln in net_lines:
+        if not seen_header:
+            if ln.strip().startswith("BSSID"):
+                seen_header = True
+            continue
+        data_lines.append(ln)
+    if data_lines:
+        reader = csv.reader(data_lines)
         for row in reader:
             if len(row) < 14:
                 continue
@@ -85,8 +98,16 @@ def parse_airodump_csv(csv_path: str) -> tuple[dict, dict]:
     # Parse Clients
     if len(sections) > 1:
         client_lines = sections[1].split("\r\n")
-        if len(client_lines) > 2:
-            reader = csv.reader(client_lines[2:])
+        cli_data = []
+        seen_header = False
+        for ln in client_lines:
+            if not seen_header:
+                if ln.strip().startswith("Station MAC"):
+                    seen_header = True
+                continue
+            cli_data.append(ln)
+        if cli_data:
+            reader = csv.reader(cli_data)
             for row in reader:
                 if len(row) < 7:
                     continue

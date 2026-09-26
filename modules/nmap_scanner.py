@@ -6,19 +6,21 @@ class NmapScanner:
     def __init__(self):
         # Construcción tolerante: si el binario nmap no está instalado, la app
         # sigue arrancando y esta capacidad queda desactivada hasta instalarlo.
-        self.nm = None
+        self.available = False
         try:
-            self.nm = nmap.PortScanner()
+            nmap.PortScanner()
+            self.available = True
         except Exception:
-            self.nm = None
+            self.available = False
 
-    def _ensure(self):
-        if self.nm is None:
-            self.nm = nmap.PortScanner()  # relanza el error legible si sigue sin estar
-        return self.nm
+    def _new(self):
+        # Una instancia nueva por escaneo: python-nmap guarda el resultado en el
+        # propio objeto, así que compartirlo entre escaneos concurrentes los
+        # corrompería. Crear uno por llamada evita esa condición de carrera.
+        return nmap.PortScanner()
 
     async def scan(self, target_ip: str, profile: str = "rápido") -> list[dict]:
-        self._ensure()
+        nm = self._new()
         args = "-F -T4"
         if profile == "estándar":
             args = "-sV -T4"
@@ -28,24 +30,24 @@ class NmapScanner:
         # Escaneo bloqueante, usar run_in_executor para no bloquear el loop asíncrono
         loop = asyncio.get_event_loop()
         try:
-            await loop.run_in_executor(None, lambda: self.nm.scan(target_ip, arguments=args))
+            await loop.run_in_executor(None, lambda: nm.scan(target_ip, arguments=args))
         except Exception as e:
             return [{"error": str(e)}]
 
-        if target_ip not in self.nm.all_hosts():
+        if target_ip not in nm.all_hosts():
             return []
 
         results = []
-        for proto in self.nm[target_ip].all_protocols():
+        for proto in nm[target_ip].all_protocols():
             if proto != 'tcp': continue
             
-            ports = self.nm[target_ip][proto].keys()
+            ports = nm[target_ip][proto].keys()
             for port in sorted(ports):
-                state = self.nm[target_ip][proto][port]['state']
+                state = nm[target_ip][proto][port]['state']
                 if state != 'open': continue
 
-                service = self.nm[target_ip][proto][port].get('name', 'unknown')
-                version = self.nm[target_ip][proto][port].get('version', '')
+                service = nm[target_ip][proto][port].get('name', 'unknown')
+                version = nm[target_ip][proto][port].get('version', '')
                 
                 knowledge = PORT_KNOWLEDGE.get(port, {
                     "servicio": f"{service}",
@@ -74,34 +76,34 @@ class NmapScanner:
         `with_os` activa detección de SO y SYN scan (requieren sudo). Si no,
         usa un escaneo de servicios estándar que funciona sin privilegios.
         """
-        self._ensure()
+        nm = self._new()
         args = "-sS -sV -O --top-ports 100" if with_os else "-sV --top-ports 100 -T4"
         loop = asyncio.get_event_loop()
         try:
-            await loop.run_in_executor(None, lambda: self.nm.scan(hosts=target, arguments=args))
+            await loop.run_in_executor(None, lambda: nm.scan(hosts=target, arguments=args))
         except Exception as e:
             return [{"error": str(e)}]
 
         resultados = []
-        for host in self.nm.all_hosts():
-            if self.nm[host].state() != "up":
+        for host in nm.all_hosts():
+            if nm[host].state() != "up":
                 continue
-            info = {"ip": host, "hostname": self.nm[host].hostname(),
+            info = {"ip": host, "hostname": nm[host].hostname(),
                     "mac": "Desconocida", "vendor": "Desconocido", "os": "Desconocido", "puertos": []}
-            addrs = self.nm[host].get("addresses", {})
+            addrs = nm[host].get("addresses", {})
             if "mac" in addrs:
                 info["mac"] = addrs["mac"]
-                vendor = self.nm[host].get("vendor", {})
+                vendor = nm[host].get("vendor", {})
                 if info["mac"] in vendor:
                     info["vendor"] = vendor[info["mac"]]
-            osmatch = self.nm[host].get("osmatch", [])
+            osmatch = nm[host].get("osmatch", [])
             if osmatch:
                 info["os"] = osmatch[0].get("name", "Desconocido")
             for proto in ("tcp", "udp"):
-                if proto not in self.nm[host]:
+                if proto not in nm[host]:
                     continue
-                for port in self.nm[host][proto]:
-                    pdata = self.nm[host][proto][port]
+                for port in nm[host][proto]:
+                    pdata = nm[host][proto][port]
                     if pdata.get("state") not in ("open", "open|filtered"):
                         continue
                     version = f"{pdata.get('product', '')} {pdata.get('version', '')}".strip()
