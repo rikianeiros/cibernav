@@ -8,7 +8,7 @@
 </head>
 <body>
 <header class="topbar">
-    <div class="brand">cibernav<span class="tag">auditoría wifi · iot · naval</span></div>
+    <div class="brand">cibernav<span class="tag">auditoría wifi · iot · náutico</span></div>
     <div class="topright">
         <label class="passive-toggle" title="Enruta el tráfico saliente por Tor (recon web + HTTP de la app)">
             <input type="checkbox" id="tor-chk" onchange="app.setTor(this.checked)"> Tor
@@ -30,7 +30,7 @@
     <button class="tab" data-tab="crackeo">Crackeo</button>
     <button class="tab" data-tab="inventario">Inventario e informes</button>
     <button class="tab" data-tab="recon">Recon web</button>
-    <button class="tab" data-tab="naval">Modo naval (NMEA)</button>
+    <button class="tab" data-tab="nautico">Modo náutico (NMEA)</button>
 </nav>
 
 <main>
@@ -106,7 +106,7 @@
     <section id="inventario" class="panel">
         <div class="row">
             <input id="inv-target" placeholder="Red/host (p. ej. 192.168.1.0/24)">
-            <input id="inv-name" placeholder="Nombre del objetivo (p. ej. Oficina, Buque Nereida)">
+            <input id="inv-name" placeholder="Nombre del objetivo (p. ej. Oficina, Barco de Ana)">
             <label class="chk"><input type="checkbox" id="inv-os"> Detectar SO (sudo)</label>
             <button onclick="app.inventoryScan()">Inventariar</button>
         </div>
@@ -142,8 +142,8 @@
         <div id="recon-result"></div>
     </section>
 
-    <!-- NAVAL -->
-    <section id="naval" class="panel">
+    <!-- NÁUTICO -->
+    <section id="nautico" class="panel">
         <p class="hint">Prueba de concepto: comprueba si los datos de navegación (NMEA) viajan en claro por la red.</p>
         <div class="row">
             <input id="nmea-ip" placeholder="IP del multiplexor/instrumento NMEA">

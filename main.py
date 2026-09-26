@@ -1,10 +1,10 @@
 """
-CIBERNAV — Suite de auditoría de seguridad de redes (Wi-Fi / IoT / naval).
+CIBERNAV — Suite de auditoría de seguridad de redes (Wi-Fi / IoT / náutico).
 
 API FastAPI que unifica:
   · Reconocimiento Wi-Fi en tiempo real y ataques (deauth / handshake / PMKID)
   · Escaneo de puertos con nmap y traducción de riesgos
-  · Modo naval: captura de datos NMEA en claro (PoC)
+  · Modo náutico: captura de datos NMEA en claro (PoC)
   · Persistencia por objetivo e informes (PDF/HTML)
 
 Diseñada para degradar con elegancia: en un equipo sin las herramientas de
@@ -412,16 +412,16 @@ async def vulns_update(url: str = "", merge: bool = True, username: str = Depend
     return res
 
 
-# --- Modo naval: NMEA ---
-@app.post("/api/naval/nmea")
-async def naval_nmea(ip: str, puerto: int = 10110, lineas: int = 5, username: str = Depends(verify_credentials)):
+# --- Modo náutico: NMEA ---
+@app.post("/api/nautico/nmea")
+async def nautico_nmea(ip: str, puerto: int = 10110, lineas: int = 5, username: str = Depends(verify_credentials)):
     resultado = await nmea.capturar_nmea_async(ip, puerto, lineas)
     nivel = "CRITICAL" if resultado.get("exito") else "INFO"
-    alert_engine.add_alert(nivel, f"PoC NMEA en {ip}:{puerto} — {'datos en claro capturados' if resultado.get('exito') else 'sin datos'}", "naval")
+    alert_engine.add_alert(nivel, f"PoC NMEA en {ip}:{puerto} — {'datos en claro capturados' if resultado.get('exito') else 'sin datos'}", "nautico")
     return resultado
 
 
-@app.post("/api/naval/nmea/auto")
+@app.post("/api/nautico/nmea/auto")
 async def naval_nmea_auto(ip: str, username: str = Depends(verify_credentials)):
     """Prueba los puertos NMEA habituales sobre una IP."""
     salidas = []

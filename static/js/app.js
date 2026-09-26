@@ -256,12 +256,12 @@ const app = (() => {
     async nmea() {
       const ip = $("nmea-ip").value.trim(), puerto = $("nmea-port").value || 10110;
       if (!ip) return; $("nmea-result").innerHTML = `<p class="hint">Conectando a ${ip}:${puerto}…</p>`;
-      await act(async () => renderNmea([await api(`/api/naval/nmea?${qs({ ip, puerto })}`, "POST")]));
+      await act(async () => renderNmea([await api(`/api/nautico/nmea?${qs({ ip, puerto })}`, "POST")]));
     },
     async nmeaAuto() {
       const ip = $("nmea-ip").value.trim(); if (!ip) return;
       $("nmea-result").innerHTML = `<p class="hint">Probando puertos NMEA en ${ip}…</p>`;
-      await act(async () => { const r = await api(`/api/naval/nmea/auto?${qs({ ip })}`, "POST"); renderNmea(r.resultados); });
+      await act(async () => { const r = await api(`/api/nautico/nmea/auto?${qs({ ip })}`, "POST"); renderNmea(r.resultados); });
     },
   };
 

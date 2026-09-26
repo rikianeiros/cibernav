@@ -1,5 +1,5 @@
 """
-Módulo NMEA (modo naval).
+Módulo NMEA (modo náutico).
 
 Prueba de concepto: se conecta a un puerto NMEA por TCP y captura sentencias
 de navegación. Si tiene éxito, demuestra que los datos de navegación (posición
@@ -95,7 +95,7 @@ async def capturar_nmea_async(ip: str, puerto: int = 10110, num_lineas: int = 5,
         "mensaje": (
             "Datos de navegación capturados en claro. La red náutica NO está aislada "
             "ni cifrada: cualquiera con acceso a la red puede leer (y potencialmente "
-            "falsear) la posición y el rumbo del buque."
+            "falsear) la posición y el rumbo de la embarcación."
             if sentencias else "Sin datos."
         ),
         "recomendacion": (

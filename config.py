@@ -45,7 +45,7 @@ NMAP_TIMEOUT = 300
 # --- Diccionarios ---
 DEFAULT_WORDLIST = os.environ.get("CIBERNAV_WORDLIST", "/usr/share/wordlists/rockyou.txt")
 
-# --- Puertos NMEA (modo naval) ---
+# --- Puertos NMEA (modo náutico) ---
 NMEA_PORTS = [10110, 2000]
 
 # --- Modo pasivo (solo lectura) ---

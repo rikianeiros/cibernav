@@ -4,7 +4,7 @@ explicaciones claras con su nivel de riesgo, implicaciones y recomendaciones.
 
 Fusiona el conocimiento general de red/IoT con los puertos específicos de
 entornos náuticos (NMEA), para que el mismo escáner sirva en una casa, una
-oficina o un buque.
+oficina o una embarcación.
 """
 
 PORT_KNOWLEDGE = {
@@ -103,7 +103,7 @@ PORT_KNOWLEDGE = {
         "servicio": "NMEA 2000 / bus náutico expuesto",
         "riesgo": "ALTO",
         "descripcion": "Puede ser el bus de datos NMEA 2000 accesible por red, lo que permite leer y potencialmente inyectar datos de navegación.",
-        "implicaciones": ["Lectura de datos de instrumentación del buque", "Posible inyección de datos falsos de navegación"],
+        "implicaciones": ["Lectura de datos de instrumentación de la embarcación", "Posible inyección de datos falsos de navegación"],
         "recomendacion": "Verificar qué servicio corre realmente y aislar la red náutica.",
     },
     3306: {
@@ -153,7 +153,7 @@ PORT_KNOWLEDGE = {
         "riesgo": "CRÍTICO",
         "descripcion": "Puerto marítimo estándar que emite datos de navegación en tiempo real (posición GPS, rumbo, velocidad) sin ninguna autenticación ni cifrado.",
         "implicaciones": [
-            "Posición y rumbo del buque legibles por cualquiera en la red",
+            "Posición y rumbo de la embarcación legibles por cualquiera en la red",
             "Posible falseo de datos de navegación (spoofing)",
             "Red náutica no aislada de la red de tripulación/invitados",
         ],

@@ -1,7 +1,7 @@
 """
 Persistencia en SQLite.
 
-Guarda el histórico de escaneos agrupados por "objetivo" (un buque, una casa,
+Guarda el histórico de escaneos agrupados por "objetivo" (una embarcación, una casa,
 una oficina...), con su inventario de dispositivos, servicios y puertos. Sirve
 de base para los informes.
 """
